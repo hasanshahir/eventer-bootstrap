@@ -66,22 +66,22 @@ export default function ScanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-black">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-zinc-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white dark:selection:bg-blue-500 dark:selection:text-black transition-colors">
       {/* Editorial Header */}
-      <header className="border-b-2 border-zinc-800 bg-zinc-950 px-4 py-12 sm:px-8 lg:px-12">
+      <header className="border-b-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#030712] px-4 py-12 sm:px-8 lg:px-12 transition-colors">
         <div className="mx-auto max-w-[1200px]">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-y border-zinc-800 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.18em]">
-            <span className="flex items-center gap-2 text-emerald-400">
-              <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="flex flex-wrap items-center justify-between gap-3 border-y border-slate-200 dark:border-zinc-800 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.18em]">
+            <span className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+              <span className="size-2 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse" />
               Organizer Check-In Operations &bull; Live Gate Scanner
             </span>
-            <span className="text-zinc-500 font-mono">Camera: WebRTC Stream</span>
+            <span className="text-slate-500 dark:text-zinc-500 font-mono">Camera: WebRTC Stream</span>
           </div>
 
-          <h1 className="mt-8 font-serif text-5xl sm:text-7xl font-bold tracking-tight text-white">
+          <h1 className="mt-8 font-serif text-5xl sm:text-7xl font-bold tracking-tight text-slate-900 dark:text-white">
             Gate Scanner Desk.
           </h1>
-          <p className="mt-4 max-w-[60ch] border-l-4 border-emerald-500 pl-4 text-sm sm:text-base font-medium leading-relaxed text-zinc-300">
+          <p className="mt-4 max-w-[60ch] border-l-4 border-blue-600 dark:border-blue-500 pl-4 text-sm sm:text-base font-medium leading-relaxed text-slate-600 dark:text-zinc-300">
             Scan attendee QR passes or verify cryptographic ticket tokens. Confirms registration status and timestamps check-in instantly in PostgreSQL.
           </p>
         </div>
@@ -90,14 +90,14 @@ export default function ScanPage() {
       <main className="mx-auto w-full max-w-[1200px] px-4 py-12 sm:px-8 lg:px-12 flex-1 grid gap-8 lg:grid-cols-[1.2fr_.8fr]">
         {/* Left Column: QR Scanner & Manual Verification */}
         <div className="space-y-6">
-          <div className="border border-zinc-800 bg-zinc-900/70 p-6 space-y-4">
-            <h2 className="font-serif text-2xl font-bold text-white">Camera Viewfinder</h2>
-            <div id="reader" className="overflow-hidden border border-zinc-800 rounded bg-zinc-950" />
+          <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 p-6 space-y-4 shadow-sm">
+            <h2 className="font-serif text-2xl font-bold text-slate-900 dark:text-white">Camera Viewfinder</h2>
+            <div id="reader" className="overflow-hidden border border-slate-200 dark:border-zinc-800 rounded bg-slate-50 dark:bg-zinc-950" />
           </div>
 
           {/* Manual Input Fallback */}
-          <div className="border border-zinc-800 bg-zinc-900/70 p-6 space-y-3">
-            <h3 className="font-mono text-xs uppercase tracking-[0.16em] text-zinc-400 font-semibold">
+          <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 p-6 space-y-3 shadow-sm">
+            <h3 className="font-mono text-xs uppercase tracking-[0.16em] text-slate-600 dark:text-zinc-400 font-semibold">
               Manual Ticket Token Override
             </h3>
             <div className="flex gap-2">
@@ -105,12 +105,12 @@ export default function ScanPage() {
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 placeholder="Paste ticket token..."
-                className="flex-1 bg-zinc-950 border border-zinc-800 px-4 py-2.5 text-sm text-zinc-100 font-mono outline-none focus:border-emerald-500"
+                className="flex-1 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 px-4 py-2.5 text-sm text-slate-900 dark:text-zinc-100 font-mono outline-none focus:border-blue-600 dark:focus:border-blue-500 shadow-sm transition-colors"
               />
               <button
                 onClick={() => verify(token)}
                 disabled={busy || !token.trim()}
-                className="border border-zinc-700 bg-emerald-500 text-black font-semibold font-mono text-xs uppercase px-5 py-2.5 hover:bg-emerald-400 disabled:opacity-50"
+                className="border border-blue-600 dark:border-blue-400 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white dark:text-black font-semibold font-mono text-xs uppercase px-5 py-2.5 shadow-sm transition-all disabled:opacity-50"
               >
                 {busy ? "Checking…" : "Verify"}
               </button>
@@ -122,30 +122,30 @@ export default function ScanPage() {
         <div className="space-y-6">
           {/* Result Alert Banner */}
           {result?.ok && (
-            <div className="border border-emerald-500/50 bg-emerald-500/10 p-6 space-y-2">
-              <span className="font-mono text-[10px] uppercase font-bold text-emerald-400 tracking-wider">
+            <div className="border border-blue-500/50 bg-blue-50 dark:bg-blue-500/10 p-6 space-y-2 shadow-sm">
+              <span className="font-mono text-[10px] uppercase font-bold text-blue-700 dark:text-blue-400 tracking-wider">
                 ✓ CHECK-IN CONFIRMED
               </span>
-              <h3 className="font-serif text-3xl font-bold text-white">
+              <h3 className="font-serif text-3xl font-bold text-slate-900 dark:text-white">
                 {result.attendee?.fullName || "Attendee"}
               </h3>
-              <p className="font-mono text-xs text-zinc-300">
+              <p className="font-mono text-xs text-slate-600 dark:text-zinc-300">
                 {result.attendee?.university || "University Student"} &bull; {result.attendee?.email}
               </p>
-              <p className="font-mono text-[11px] text-emerald-400 pt-2 border-t border-emerald-500/20">
+              <p className="font-mono text-[11px] text-blue-700 dark:text-blue-400 pt-2 border-t border-blue-500/20 font-semibold">
                 Event: {result.event?.title}
               </p>
             </div>
           )}
 
           {err && (
-            <div className="border border-red-500/50 bg-red-500/10 p-6 space-y-2">
-              <span className="font-mono text-[10px] uppercase font-bold text-red-400 tracking-wider">
+            <div className="border border-red-500/50 bg-red-50 dark:bg-red-500/10 p-6 space-y-2 shadow-sm">
+              <span className="font-mono text-[10px] uppercase font-bold text-red-600 dark:text-red-400 tracking-wider">
                 ✕ SCAN REJECTED
               </span>
-              <p className="font-serif text-xl font-bold text-white">{err}</p>
+              <p className="font-serif text-xl font-bold text-slate-900 dark:text-white">{err}</p>
               {result?.alreadyCheckedIn && (
-                <p className="font-mono text-xs text-zinc-400">
+                <p className="font-mono text-xs text-slate-600 dark:text-zinc-400">
                   Attendee: {result.attendee?.fullName} ({result.attendee?.email})
                 </p>
               )}
@@ -153,29 +153,29 @@ export default function ScanPage() {
           )}
 
           {/* History Ledger */}
-          <div className="border border-zinc-800 bg-zinc-900/70 p-6">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
-              <span className="font-mono text-xs uppercase font-semibold tracking-[0.16em] text-zinc-400">
+          <div className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 p-6 shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3 mb-4">
+              <span className="font-mono text-xs uppercase font-semibold tracking-[0.16em] text-slate-600 dark:text-zinc-400">
                 Live Attendance Ledger
               </span>
-              <span className="font-mono text-xs text-emerald-400">
+              <span className="font-mono text-xs text-blue-600 dark:text-blue-400 font-bold">
                 {history.length} Checked In
               </span>
             </div>
 
             {history.length === 0 ? (
-              <p className="font-mono text-xs text-zinc-500 py-6 text-center">
+              <p className="font-mono text-xs text-slate-500 dark:text-zinc-500 py-6 text-center">
                 Ready to scan passes.
               </p>
             ) : (
-              <div className="divide-y divide-zinc-800 font-mono text-xs">
+              <div className="divide-y divide-slate-200 dark:divide-zinc-800 font-mono text-xs">
                 {history.map((h, i) => (
                   <div key={i} className="py-3 flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-zinc-200">{h.attendee?.fullName}</p>
-                      <p className="text-[10px] text-zinc-500">{h.attendee?.university}</p>
+                      <p className="font-semibold text-slate-800 dark:text-zinc-200">{h.attendee?.fullName}</p>
+                      <p className="text-[10px] text-slate-500 dark:text-zinc-500">{h.attendee?.university}</p>
                     </div>
-                    <span className="text-[10px] text-emerald-400">✓ In Gate</span>
+                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">✓ In Gate</span>
                   </div>
                 ))}
               </div>
