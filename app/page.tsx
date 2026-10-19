@@ -3,11 +3,19 @@ import { prisma } from '@/lib/prisma';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const events = await prisma.event.findMany({
-    orderBy: {
-      startTime: 'asc',
-    },
-  });
+  let events: Array<{ id: string; title: string; city: string; startTime: Date }> = [];
+
+  try {
+    if (process.env.DATABASE_URL) {
+      events = await prisma.event.findMany({
+        orderBy: {
+          startTime: 'asc',
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error querying events from database:', error);
+  }
 
   return (
     <main className="max-w-4xl mx-auto p-6">
