@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RegistrationStatus {
+  PENDING
+  CONFIRMED
+  WAITLISTED
+  CANCELLED
+  CHECKED_IN
+}
+
+model User {
+  id            String         @id @default(cuid())
+  fullName      String
+  email         String         @unique
+  university    String?
+  rollNumber    String?
+  city          String?
+  createdAt     DateTime       @default(now())
+  registrations Registration[]
+}
+
+model Organizer {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  events    Event[]
+}
+
+model Event {
+  id            String         @id @default(cuid())
+  title         String
+  description   String
+  city          String
+  venue         String?
+  type          String
+  startTime     DateTime
+  endTime       DateTime
+  capacity      Int?
+  organizerId   String
+  organizer     Organizer      @relation(fields: [organizerId], references: [id])
+  createdAt     DateTime       @default(now())
+  registrations Registration[]
+  teams         Team[]
+
+  @@index([city])
+  @@index([startTime])
+  @@index([organizerId])
+}
+
+model Registration {
+  id          String             @id @default(cuid())
+  userId      String
+  user        User               @relation(fields: [userId], references: [id])
+  eventId     String
+  event       Event              @relation(fields: [eventId], references: [id])
+  status      RegistrationStatus @default(PENDING)
+  ticketToken String             @unique
+  checkedInAt DateTime?
+  createdAt   DateTime           @default(now())
+
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@index([eventId])
+  @@index([status])
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+}
