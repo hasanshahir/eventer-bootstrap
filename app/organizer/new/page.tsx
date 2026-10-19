@@ -146,7 +146,7 @@ export default function NewEventPage() {
           </button>
         </div>
 
-        {/* Extracted Structured Event Review Form */}
+        {/* Extracted Form Review */}
         {ev && (
           <div className="border border-zinc-800 bg-zinc-900/90 p-6 sm:p-8 space-y-5">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-3">

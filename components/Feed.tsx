@@ -64,7 +64,6 @@ export default function Feed({ events }: { events: EventCard[] }) {
         <div className="mx-auto grid max-w-[1500px] lg:grid-cols-[minmax(0,1.4fr)_minmax(20rem,.6fr)]">
           {/* Main Hero Desk */}
           <div className="relative overflow-hidden border-zinc-800 px-4 py-12 sm:px-8 sm:py-16 lg:border-r lg:px-12 lg:py-20">
-            {/* Subtle paper grid pattern */}
             <div
               aria-hidden="true"
               className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(#27272a_1px,transparent_1px)] [background-size:16px_16px]"

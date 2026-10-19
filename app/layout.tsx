@@ -41,7 +41,7 @@ export default function RootLayout({
               Issue 10.26 &nbsp;/&nbsp; Live radar edition
             </div>
 
-            {/* Primary Navigation & Action */}
+            {/* Navigation & Action */}
             <div className="flex items-center justify-end gap-3 pl-3 lg:pl-6">
               <nav className="flex items-center gap-3 sm:gap-6" aria-label="Primary">
                 <Link

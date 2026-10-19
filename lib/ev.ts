@@ -1,17 +1,9 @@
 import { deriveTags } from "./match";
 
 export type EventCard = {
-  id: string;
-  title: string;
-  organizer: string;
-  city: string;
-  venue: string;
-  description: string;
-  type: string;
-  startsAt: string | null;
-  endsAt: string | null;
-  tags: string[];
-  status: string;
+  id: string; title: string; organizer: string; city: string; venue: string;
+  description: string; type: string; startsAt: string | null; endsAt: string | null;
+  tags: string[]; status: string;
 };
 
 export function toCard(e: any): EventCard {
@@ -37,11 +29,7 @@ export function toCard(e: any): EventCard {
 export function fmtDate(iso: string | null) {
   if (!iso) return "TBA";
   return new Date(iso).toLocaleString("en-GB", {
-    timeZone: "Asia/Karachi",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+    timeZone: "Asia/Karachi", day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
   });
 }

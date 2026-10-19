@@ -1,29 +1,18 @@
-export const STACK_OPTIONS = [
-  "Next.js",
-  "React",
-  "Python",
-  "AI/ML",
-  "Flutter",
-  "Node.js",
-  "DevOps",
-  "Cybersecurity",
-  "Web3",
-  "UI/UX",
-];
+export const STACK_OPTIONS = ["Next.js","React","Python","AI/ML","Flutter","Node.js","DevOps","Cybersecurity","Web3","UI/UX"];
 
 const KEYWORDS: Record<string, string[]> = {
-  "Next.js": ["next.js", "nextjs", "vercel"],
-  React: ["react"],
-  Python: ["python", "django", "flask"],
-  "AI/ML": ["ai", "ml", "machine learning", "gemini", "genai", "llm", "data science"],
-  Flutter: ["flutter", "firebase", "dart"],
-  "Node.js": ["node", "express", "backend"],
-  DevOps: ["devops", "docker", "kubernetes", "cloud", "aws"],
-  Cybersecurity: ["security", "ctf", "cyber"],
-  Web3: ["web3", "blockchain", "solidity"],
-  "UI/UX": ["ui/ux", "design", "figma"],
-  Hackathon: ["hackathon", "codesprint", "olympiad", "competition"],
-  Workshop: ["workshop", "bootcamp"],
+  "Next.js": ["next.js","nextjs","vercel"],
+  "React": ["react"],
+  "Python": ["python","django","flask"],
+  "AI/ML": ["ai","ml","machine learning","gemini","genai","llm","data science"],
+  "Flutter": ["flutter","firebase","dart"],
+  "Node.js": ["node","express","backend"],
+  "DevOps": ["devops","docker","kubernetes","cloud","aws"],
+  "Cybersecurity": ["security","ctf","cyber"],
+  "Web3": ["web3","blockchain","solidity"],
+  "UI/UX": ["ui/ux","design","figma"],
+  "Hackathon": ["hackathon","codesprint","olympiad","competition"],
+  "Workshop": ["workshop","bootcamp"],
 };
 
 export function deriveTags(title = "", description = ""): string[] {

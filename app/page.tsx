@@ -6,19 +6,8 @@ import Feed from "@/components/Feed";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  let events: any[] = [];
-  try {
-    if (process.env.DATABASE_URL) {
-      const raw = await (prisma as any).event.findMany({
-        include: { organizer: true },
-        orderBy: { startTime: "asc" },
-      });
-      events = raw.map(toCard);
-    }
-  } catch (err) {
-    console.error("Error querying events for home feed:", err);
-  }
-
+  const raw = await (prisma as any).event.findMany({ include: { organizer: true }, orderBy: { startTime: "asc" } });
+  const events = raw.map(toCard);
   return (
     <Suspense fallback={null}>
       <Feed events={events} />

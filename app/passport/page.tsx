@@ -163,7 +163,7 @@ export default function PassportPage() {
                   </div>
                 </div>
 
-                {/* Perforated Divider & QR Code Section */}
+                {/* Perforated Divider & QR Section */}
                 <div className="border-t md:border-t-0 md:border-l-2 border-dashed border-zinc-800 p-8 bg-zinc-950 flex flex-col items-center justify-center min-w-[240px]">
                   <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-500 mb-3 text-center">
                     GATE CHECK-IN PASS
