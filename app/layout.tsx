@@ -14,53 +14,91 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans">
-        <header className="sticky top-0 z-50 w-full border-b border-zinc-800/80 bg-zinc-950/75 backdrop-blur-md">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-8">
-              <Link href="/" className="flex items-center gap-2 group">
-                <span className="font-mono text-xl font-bold tracking-tight text-white group-hover:text-emerald-400 transition-colors">
+      <body className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-black">
+        {/* Editorial Masthead */}
+        <header className="fixed inset-x-0 top-0 z-50 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
+          <div className="mx-auto grid h-[4.5rem] max-w-[1500px] grid-cols-[minmax(0,1fr)_auto] items-stretch px-4 sm:px-6 lg:grid-cols-[1fr_auto_1fr] lg:px-10">
+            {/* Wordmark & Emblem */}
+            <Link
+              className="group flex min-w-0 min-h-11 items-center gap-2 border-r border-zinc-800 pr-3 sm:gap-3 sm:pr-4 lg:border-r-0"
+              href="/"
+            >
+              <span className="grid size-8 shrink-0 place-items-center border border-zinc-700 bg-emerald-500 font-mono text-[10px] font-bold text-black transition-transform group-hover:-rotate-3">
+                EV
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate font-serif text-xl font-bold leading-none tracking-tight text-white group-hover:text-emerald-400 transition-colors">
                   Eventer
                 </span>
-                <span className="text-[10px] uppercase tracking-widest font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  Radar
+                <span className="mt-1 hidden font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-500 md:block">
+                  Pakistan event intelligence
                 </span>
-              </Link>
+              </span>
+            </Link>
 
-              <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-400">
-                <Link href="/" className="hover:text-zinc-100 transition-colors">
-                  Radar
-                </Link>
-                <Link href="/cities" className="hover:text-zinc-100 transition-colors">
-                  Cities
-                </Link>
-                <Link href="/passport" className="hover:text-zinc-100 transition-colors">
-                  Passport
-                </Link>
-                <Link href="/organizer/scan" className="hover:text-zinc-100 transition-colors">
-                  Check-in
-                </Link>
-              </nav>
+            {/* Central Dispatch Issue Marker */}
+            <div className="hidden items-center border-x border-zinc-800 px-7 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500 lg:flex">
+              Issue 10.26 &nbsp;/&nbsp; Live radar edition
             </div>
 
-            <div className="flex items-center gap-4">
-              <Link
-                href="/organizer/new"
-                className="text-xs sm:text-sm font-medium px-3.5 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition-colors"
-              >
-                + Submit Event
-              </Link>
+            {/* Primary Navigation & Action */}
+            <div className="flex items-center justify-end gap-3 pl-3 lg:pl-6">
+              <nav className="flex items-center gap-3 sm:gap-6" aria-label="Primary">
+                <Link
+                  className="flex min-h-11 items-center px-1 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300 hover:text-emerald-400 transition-colors"
+                  href="/"
+                >
+                  Radar
+                </Link>
+                <Link
+                  className="flex min-h-11 items-center px-1 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300 hover:text-emerald-400 transition-colors"
+                  href="/cities"
+                >
+                  Cities
+                </Link>
+                <Link
+                  className="flex min-h-11 items-center px-1 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300 hover:text-emerald-400 transition-colors"
+                  href="/passport"
+                >
+                  Passport
+                </Link>
+                <Link
+                  className="flex min-h-11 items-center px-1 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-300 hover:text-emerald-400 transition-colors"
+                  href="/organizer/scan"
+                >
+                  Check-in
+                </Link>
+                <Link
+                  className="inline-flex shrink-0 items-center justify-center gap-1.5 h-10 border border-zinc-700 bg-emerald-500 px-4 text-[11px] font-semibold uppercase tracking-[0.1em] text-black hover:bg-emerald-400 transition-colors"
+                  href="/organizer/new"
+                >
+                  Submit
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="1em"
+                    height="1em"
+                    fill="currentColor"
+                    viewBox="0 0 256 256"
+                    className="size-3.5"
+                  >
+                    <path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z" />
+                  </svg>
+                </Link>
+              </nav>
             </div>
           </div>
         </header>
 
-        <div className="flex-1">
+        {/* Content Body */}
+        <div className="flex-1 pt-[4.5rem]">
           {children}
         </div>
 
-        <footer className="border-t border-zinc-800/60 py-8 text-center text-xs text-zinc-500">
-          <div className="max-w-6xl mx-auto px-4">
-            <p>Eventer — Pakistan&apos;s AI-Powered Tech Event Radar</p>
+        {/* Editorial Sub-Footer */}
+        <footer className="border-t border-zinc-800 bg-zinc-950 py-8 text-center text-xs text-zinc-500">
+          <div className="mx-auto max-w-[1500px] px-4 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-[10px] uppercase tracking-[0.14em]">
+            <span>Eventer Pakistan &bull; Nationwide AI Radar</span>
+            <span>All rights reserved &bull; 2026</span>
           </div>
         </footer>
       </body>

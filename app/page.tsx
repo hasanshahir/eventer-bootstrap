@@ -1,28 +1,27 @@
-import { prisma } from '@/lib/prisma';
+import { Suspense } from "react";
+import { prisma } from "@/lib/prisma";
+import { toCard } from "@/lib/ev";
+import Feed from "@/components/Feed";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
-  const events = await prisma.event.findMany({
-    orderBy: {
-      startTime: 'asc',
-    },
-  });
+export default async function Home() {
+  let events: any[] = [];
+  try {
+    if (process.env.DATABASE_URL) {
+      const raw = await (prisma as any).event.findMany({
+        include: { organizer: true },
+        orderBy: { startTime: "asc" },
+      });
+      events = raw.map(toCard);
+    }
+  } catch (err) {
+    console.error("Error querying events for home feed:", err);
+  }
 
   return (
-    <main className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Tech Events</h1>
-      {events.length === 0 ? (
-        <p>No events found.</p>
-      ) : (
-        <ul>
-          {events.map((event) => (
-            <li key={event.id}>
-              {event.title} — {event.city} ({new Date(event.startTime).toLocaleDateString()})
-            </li>
-          ))}
-        </ul>
-      )}
-    </main>
+    <Suspense fallback={null}>
+      <Feed events={events} />
+    </Suspense>
   );
 }
