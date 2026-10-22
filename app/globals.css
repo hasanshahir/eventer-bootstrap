@@ -1,52 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/*
- * ===================================================================
- * EVENTER EDITORIAL DESIGN TOKENS (Blue & White Light / Blue & Black Dark)
- * ===================================================================
- * Light Mode (Blue & White):
- *   Background:        #f8fafc (slate-50) / #ffffff (white)
- *   Foreground / Text: #0f172a (slate-900)
- *   Muted Text:        #64748b (slate-500)
- *   Card / Surface:    #ffffff (white)
- *   Borders:           #e2e8f0 (slate-200)
- *   Primary Accent:    #2563eb (blue-600) / #1d4ed8 (blue-700)
- *   Secondary Accent:  #0ea5e9 (sky-500)
- *
- * Dark Mode (Blue & Black):
- *   Background:        #030712 (pitch black / slate-950)
- *   Foreground / Text: #f8fafc (slate-100)
- *   Muted Text:        #94a3b8 (slate-400)
- *   Card / Surface:    #090d16 / #0b1120 (midnight slate-900)
- *   Borders:           #1e293b (slate-800) / #27272a (zinc-800)
- *   Primary Accent:    #3b82f6 (blue-500) / #60a5fa (blue-400)
- *   Secondary Accent:  #38bdf8 (sky-400)
- * ===================================================================
- */
-
-@layer base {
-  body {
-    @apply bg-slate-50 text-slate-900 dark:bg-[#030712] dark:text-slate-100 antialiased min-h-screen flex flex-col font-sans selection:bg-blue-600 selection:text-white dark:selection:bg-blue-500 dark:selection:text-black transition-colors duration-150;
-    background-image:
-      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(37, 99, 235, 0.08), transparent 70%),
-      radial-gradient(ellipse 60% 40% at 80% 10%, rgba(14, 165, 233, 0.05), transparent 70%);
-    background-attachment: fixed;
-  }
-
-  .dark body {
-    background-image:
-      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(37, 99, 235, 0.16), transparent 70%),
-      radial-gradient(ellipse 60% 40% at 80% 10%, rgba(56, 189, 248, 0.09), transparent 70%);
-  }
+:root,
+html:not(.dark),
+[data-theme="light"] {
+  --background: #f7efe3;
+  --foreground: #160d08;
+  --card: #fbf6ee;
+  --card-foreground: #160d08;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --muted: #e9e0d3;
+  --muted-foreground: #5b4d42;
+  --border: rgba(22, 13, 8, 0.22);
 }
 
-@layer utilities {
-  .editorial-shadow {
-    box-shadow: 4px 4px 0 0 rgba(37, 99, 235, 0.25);
-  }
-  .dark .editorial-shadow {
-    box-shadow: 4px 4px 0 0 rgba(59, 130, 246, 0.5);
-  }
+html.dark,
+.dark,
+[data-theme="dark"] {
+  --background: #000000;
+  --foreground: #f8fafc;
+  --card: #09090b;
+  --card-foreground: #f8fafc;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --muted: #18181b;
+  --muted-foreground: #94a3b8;
+  --border: rgba(255, 255, 255, 0.16);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.font-heading {
+  font-family: 'Newsreader', ui-serif, Georgia, Cambria, serif;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

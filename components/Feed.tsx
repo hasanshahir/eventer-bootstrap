@@ -4,10 +4,34 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import MatchBadge from "./MatchBadge";
-import RsvpButton from "./RsvpButton";
 import { STACK_OPTIONS } from "@/lib/match";
-import { demoUser } from "@/lib/demoUser";
 import { fmtDate, type EventCard } from "@/lib/ev";
+
+const CITIES_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  Karachi: { lat: 24.8607, lng: 67.0011 },
+  Lahore: { lat: 31.5204, lng: 74.3587 },
+  Islamabad: { lat: 33.6844, lng: 73.0479 },
+  Rawalpindi: { lat: 33.5651, lng: 73.0169 },
+  Faisalabad: { lat: 31.4504, lng: 73.1350 },
+  Peshawar: { lat: 34.0151, lng: 71.5249 },
+  Multan: { lat: 30.1575, lng: 71.5249 },
+  Quetta: { lat: 30.1798, lng: 66.9750 },
+  Hyderabad: { lat: 25.3960, lng: 68.3578 },
+};
+
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 const CITY_DOSSIERS: Record<string, { latLng: string; subtitle: string; tags: string[]; desc: string }> = {
   Karachi: {
@@ -79,16 +103,25 @@ export default function Feed({ events }: { events: EventCard[] }) {
   const [city, setCity] = useState(params.get("city") ?? "All");
   const [type, setType] = useState("All");
   const [selectedCityDesk, setSelectedCityDesk] = useState("Karachi");
+  const [locating, setLocating] = useState(false);
+  const [nearMeDetected, setNearMeDetected] = useState<string | null>(null);
 
   useEffect(() => {
     try {
       const s = localStorage.getItem("eventer_stack");
       if (s) setStack(JSON.parse(s));
-      if (!localStorage.getItem("eventer_user")) {
-        localStorage.setItem("eventer_user", JSON.stringify(demoUser));
-      }
     } catch {}
   }, []);
+
+  useEffect(() => {
+    const c = params.get("city");
+    if (c) {
+      setCity(c);
+      setSelectedCityDesk(c);
+    } else {
+      setCity("All");
+    }
+  }, [params]);
 
   function toggle(t: string) {
     const next = stack.includes(t) ? stack.filter((x) => x !== t) : [...stack, t];
@@ -96,6 +129,40 @@ export default function Feed({ events }: { events: EventCard[] }) {
     try {
       localStorage.setItem("eventer_stack", JSON.stringify(next));
     } catch {}
+  }
+
+  function handleNearMe() {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false);
+        const { latitude, longitude } = pos.coords;
+        let closestCity = "Islamabad";
+        let minDistance = Infinity;
+
+        for (const [cName, coords] of Object.entries(CITIES_COORDINATES)) {
+          const dist = getDistanceKm(latitude, longitude, coords.lat, coords.lng);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestCity = cName;
+          }
+        }
+
+        setNearMeDetected(closestCity);
+        setCity(closestCity);
+        setSelectedCityDesk(closestCity);
+        const el = document.getElementById("radar-index");
+        el?.scrollIntoView({ behavior: "smooth" });
+      },
+      (err) => {
+        setLocating(false);
+        alert("Could not access location. Please select your city from the desk list.");
+      }
+    );
   }
 
   const cities = ["All", ...Array.from(new Set(events.map((e) => e.city)))];
@@ -125,11 +192,11 @@ export default function Feed({ events }: { events: EventCard[] }) {
       {/* 1. Hero Split Desk */}
       <section className="relative border-b-2 border-foreground pt-[4.5rem]">
         <div className="mx-auto grid max-w-[1500px] lg:grid-cols-[minmax(0,1.5fr)_minmax(19rem,.5fr)]">
-          <div className="relative overflow-hidden border-foreground px-4 py-12 sm:px-6 sm:py-16 lg:border-r lg:px-10 lg:py-20">
-            <div aria-hidden="true" className="paper-grid absolute inset-0 opacity-25 dark:opacity-40 text-foreground pointer-events-none" />
-
+          {/* Main Editorial Desk */}
+          <div className="relative overflow-hidden px-4 py-12 sm:px-6 sm:py-16 lg:border-r lg:border-foreground/30 lg:px-10 lg:py-20">
             <div className="relative">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-y border-foreground py-2 font-mono text-[10px] font-medium uppercase tracking-[0.16em]">
+              {/* Wire Ribbon */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-y border-foreground/30 py-2 font-mono text-[10px] font-medium uppercase tracking-[0.16em]">
                 <span className="flex items-center gap-2 text-primary font-bold">
                   <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 256 256" className="size-3.5 animate-pulse">
                     <path d="M216,64H86.51L194.3,31.67a8,8,0,0,0-4.6-15.33l-160,48h0A8,8,0,0,0,24,72V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V80A16,16,0,0,0,216,64ZM104,176H64a8,8,0,0,1,0-16h40a8,8,0,0,1,0,16Zm0-32H64a8,8,0,0,1,0-16h40a8,8,0,0,1,0,16Zm0-32H64a8,8,0,0,1,0-16h40a8,8,0,0,1,0,16Zm64,56a32,32,0,1,1,32-32A32,32,0,0,1,168,168Z" />
@@ -141,6 +208,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
                 </span>
               </div>
 
+              {/* Editorial Title */}
               <div className="grid gap-8 py-10 md:grid-cols-[minmax(0,1fr)_12rem] md:items-end">
                 <h1 className="max-w-[12ch] font-heading text-[clamp(4rem,10vw,9rem)] font-medium leading-[0.78] tracking-[-0.065em] text-foreground">
                   Har event,
@@ -151,7 +219,8 @@ export default function Feed({ events }: { events: EventCard[] }) {
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3 border-t border-foreground pt-5 sm:flex-row">
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-3 border-t border-foreground/30 pt-5 sm:flex-row">
                 <a
                   href="#radar-index"
                   className="inline-flex items-center justify-center gap-2 h-12 rounded-none border border-foreground bg-primary px-6 text-xs font-semibold uppercase tracking-[0.12em] text-white hover:bg-blue-600 transition-all shadow-[2px_2px_0px_0px_currentColor]"
@@ -163,7 +232,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
                 </a>
                 <Link
                   href="/organizer/new"
-                  className="inline-flex items-center justify-center h-12 rounded-none border border-foreground bg-transparent px-6 text-xs font-semibold uppercase tracking-[0.12em] text-foreground hover:bg-foreground hover:text-background transition-colors"
+                  className="inline-flex items-center justify-center h-12 rounded-none border border-foreground bg-transparent px-6 text-xs font-semibold uppercase tracking-[0.12em] text-foreground hover:bg-foreground hover:text-background transition-colors shadow-[2px_2px_0px_0px_currentColor]"
                 >
                   Submit a campus event
                 </Link>
@@ -171,69 +240,70 @@ export default function Feed({ events }: { events: EventCard[] }) {
             </div>
           </div>
 
-          <aside className="bg-zinc-900 text-white dark:bg-zinc-950 px-5 py-8 sm:px-8 lg:py-12 border-t lg:border-t-0 border-foreground">
-            <div className="flex items-end justify-between border-b border-white/20 pb-4">
+          {/* Right Rail: Source Ledger */}
+          <aside className="bg-foreground text-background dark:bg-card dark:text-foreground dark:border-l dark:border-foreground/30 px-5 py-8 sm:px-8 lg:py-12 border-t lg:border-t-0 border-foreground/30">
+            <div className="flex items-end justify-between border-b border-background/20 dark:border-foreground/20 pb-4">
               <div>
-                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400">
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-background/60 dark:text-muted-foreground">
                   Incoming signal
                 </p>
-                <p className="mt-1 font-heading text-3xl italic text-white">Source ledger</p>
+                <p className="mt-1 font-heading text-3xl italic text-background dark:text-foreground">Source ledger</p>
               </div>
-              <span className="font-mono text-[10px] uppercase px-2 py-0.5 border border-blue-500/50 bg-blue-500/20 text-blue-400 font-bold">
+              <span className="font-mono text-[10px] uppercase px-2 py-0.5 border border-primary bg-primary/20 text-primary font-bold">
                 LIVE
               </span>
             </div>
 
-            <div className="divide-y divide-zinc-800">
+            <div className="divide-y divide-background/15 dark:divide-foreground/15">
               <div className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 py-5">
-                <span className="font-mono text-[10px] text-zinc-500">01</span>
+                <span className="font-mono text-[10px] text-background/50 dark:text-muted-foreground">01</span>
                 <div>
-                  <p className="text-sm font-semibold text-zinc-100">Devpost PK</p>
-                  <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-400">Last scan 04m</p>
+                  <p className="text-sm font-semibold text-background dark:text-foreground">Luma PK Circles</p>
+                  <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-background/60 dark:text-muted-foreground">Live feed active</p>
                 </div>
-                <span className="font-heading text-4xl text-blue-400 font-bold">{events.length}</span>
+                <span className="font-heading text-4xl text-primary font-bold">28</span>
               </div>
 
               <div className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 py-5">
-                <span className="font-mono text-[10px] text-zinc-500">02</span>
+                <span className="font-mono text-[10px] text-background/50 dark:text-muted-foreground">02</span>
                 <div>
-                  <p className="text-sm font-semibold text-zinc-100">Luma Circles</p>
-                  <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-400">Last scan 01m</p>
+                  <p className="text-sm font-semibold text-background dark:text-foreground">GDG Chapters</p>
+                  <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-background/60 dark:text-muted-foreground">Islamabad, Khi, Lhr</p>
                 </div>
-                <span className="font-heading text-4xl text-white font-bold">28</span>
+                <span className="font-heading text-4xl text-background dark:text-foreground font-bold">14</span>
               </div>
 
               <div className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 py-5">
-                <span className="font-mono text-[10px] text-zinc-500">03</span>
+                <span className="font-mono text-[10px] text-background/50 dark:text-muted-foreground">03</span>
                 <div>
-                  <p className="text-sm font-semibold text-zinc-100">Campus desks</p>
-                  <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-400">Last scan verified</p>
+                  <p className="text-sm font-semibold text-background dark:text-foreground">Devpost Hackathons</p>
+                  <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-background/60 dark:text-muted-foreground">Pakistan & Virtual</p>
                 </div>
-                <span className="font-heading text-4xl text-white font-bold">35</span>
+                <span className="font-heading text-4xl text-background dark:text-foreground font-bold">12</span>
               </div>
 
               <div className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 py-5">
-                <span className="font-mono text-[10px] text-zinc-500">04</span>
+                <span className="font-mono text-[10px] text-background/50 dark:text-muted-foreground">04</span>
                 <div>
-                  <p className="text-sm font-semibold text-zinc-100">Unstop + Devpost</p>
-                  <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-400">Last scan 08m</p>
+                  <p className="text-sm font-semibold text-background dark:text-foreground">Campus Desks</p>
+                  <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-background/60 dark:text-muted-foreground">FAST, NUST, GIKI, NED</p>
                 </div>
-                <span className="font-heading text-4xl text-blue-400 font-bold">10</span>
+                <span className="font-heading text-4xl text-primary font-bold">35</span>
               </div>
             </div>
 
-            <p className="mt-8 border-t border-zinc-800 pt-4 font-mono text-[9px] uppercase leading-relaxed tracking-[0.12em] text-zinc-400">
-              Automated collection with human verification for campus and community listings across Pakistan.
+            <p className="mt-8 border-t border-background/20 dark:border-foreground/20 pt-4 font-mono text-[9px] uppercase leading-relaxed tracking-[0.12em] text-background/60 dark:text-muted-foreground">
+              Automated aggregation linking users directly to verified host registration platforms.
             </p>
           </aside>
         </div>
       </section>
 
       {/* 2. The Missed-Signal Problem Section */}
-      <section className="border-b-2 border-foreground bg-zinc-950 text-white dark:bg-zinc-900/40">
+      <section className="border-b-2 border-foreground/40 bg-card text-foreground">
         <div className="mx-auto grid max-w-[1500px] lg:grid-cols-[.78fr_1.22fr]">
-          <div className="border-zinc-800 px-4 py-14 sm:px-6 lg:border-r lg:px-10 lg:py-20">
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-400">
+          <div className="border-foreground/20 px-4 py-14 sm:px-6 lg:border-r lg:px-10 lg:py-20">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
               The missed-signal problem
             </p>
             <h2 className="mt-4 max-w-[9ch] font-heading text-5xl font-medium leading-[0.9] tracking-[-0.05em] sm:text-7xl">
@@ -242,25 +312,25 @@ export default function Feed({ events }: { events: EventCard[] }) {
           </div>
 
           <div className="grid sm:grid-cols-2">
-            <article className="border-b border-zinc-800 p-6 sm:border-r sm:p-10">
-              <span className="font-heading text-6xl italic text-blue-400 font-bold">01</span>
+            <article className="border-b border-foreground/20 p-6 sm:border-r sm:p-10">
+              <span className="font-heading text-6xl italic text-primary font-bold">01</span>
               <h3 className="mt-10 font-heading text-2xl font-semibold">The announcement is scattered.</h3>
-              <p className="mt-3 max-w-[38ch] text-sm leading-relaxed text-zinc-400">
-                One event lives on LinkedIn, another in a society WhatsApp group, and the next on a platform you do not check.
+              <p className="mt-3 max-w-[38ch] text-sm leading-relaxed text-muted-foreground">
+                One event lives on LinkedIn, another in a WhatsApp group, and the next on Luma or Devpost.
               </p>
             </article>
 
-            <article className="border-b border-zinc-800 p-6 sm:border-r sm:p-10">
-              <span className="font-heading text-6xl italic text-blue-400 font-bold">02</span>
+            <article className="border-b border-foreground/20 p-6 sm:p-10">
+              <span className="font-heading text-6xl italic text-primary font-bold">02</span>
               <h3 className="mt-10 font-heading text-2xl font-semibold">The deadline arrives first.</h3>
-              <p className="mt-3 max-w-[38ch] text-sm leading-relaxed text-zinc-400">
+              <p className="mt-3 max-w-[38ch] text-sm leading-relaxed text-muted-foreground">
                 By the time the right post reaches your feed, team formation, early bird, or registration may already be closed.
               </p>
             </article>
 
             <div className="p-6 sm:col-span-2 sm:p-10">
-              <p className="max-w-[52ch] font-heading text-3xl leading-tight tracking-[-0.02em] sm:text-4xl text-zinc-100">
-                HackScout turns those scattered posts into one city-by-city, deadline-first index.
+              <p className="max-w-[52ch] font-heading text-3xl leading-tight tracking-[-0.02em] sm:text-4xl text-foreground">
+                HackScout aggregates those scattered posts into one city-by-city, deadline-first index.
               </p>
             </div>
           </div>
@@ -268,11 +338,12 @@ export default function Feed({ events }: { events: EventCard[] }) {
       </section>
 
       {/* 3. Interactive City Dispatches & Dossier Section */}
-      <section className="border-b-2 border-foreground bg-background">
+      <section className="border-b-2 border-foreground/40 bg-background">
         <div className="mx-auto max-w-[1500px]">
           <div className="grid lg:grid-cols-[1.08fr_.92fr]">
-            <div className="border-foreground px-4 py-14 sm:px-6 lg:border-r lg:px-10 lg:py-20">
-              <div className="flex items-end justify-between gap-5 border-b-2 border-foreground pb-5">
+            {/* City Selector Grid */}
+            <div className="px-4 py-14 sm:px-6 lg:border-r lg:border-foreground/30 lg:px-10 lg:py-20">
+              <div className="flex items-end justify-between gap-5 border-b-2 border-foreground/30 pb-5">
                 <div>
                   <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
                     Regional wire / Pakistan
@@ -286,7 +357,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
                 </p>
               </div>
 
-              <div className="grid sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 mt-6">
                 {[
                   "Karachi",
                   "Lahore",
@@ -309,27 +380,27 @@ export default function Feed({ events }: { events: EventCard[] }) {
                       key={cName}
                       type="button"
                       onClick={() => setSelectedCityDesk(cName)}
-                      className={`group grid min-h-20 grid-cols-[2rem_1fr_auto] items-center gap-2 border-b border-foreground px-3 text-left outline-none transition-colors sm:odd:border-r ${
+                      className={`group grid min-h-20 grid-cols-[2rem_1fr_auto] items-center gap-2 border px-4 py-3 text-left outline-none transition-all shadow-[2px_2px_0px_0px_currentColor] ${
                         isSelected
-                          ? "bg-foreground text-background"
-                          : "hover:bg-card text-foreground"
+                          ? "bg-foreground text-background border-foreground font-bold"
+                          : "border-foreground/30 bg-card hover:border-primary text-foreground"
                       }`}
                     >
-                      <span className={`font-mono text-[10px] ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
+                      <span className={`font-mono text-[10px] ${isSelected ? "text-background/70" : "text-muted-foreground"}`}>
                         {String(i + 1).padStart(2, "0")}
                       </span>
                       <span>
                         <span className="block font-heading text-xl font-semibold leading-none">
                           {cName}
                         </span>
-                        <span className={`mt-1 block font-mono text-[9px] uppercase tracking-[0.12em] ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
+                        <span className={`mt-1 block font-mono text-[9px] uppercase tracking-[0.12em] ${isSelected ? "text-background/70" : "text-muted-foreground"}`}>
                           {CITY_DOSSIERS[cName]?.subtitle || "Regional Hub"}
                         </span>
                       </span>
-                      <span className={`grid size-9 place-items-center border font-mono text-xs font-semibold ${
+                      <span className={`grid size-8 place-items-center border font-mono text-xs font-semibold ${
                         isSelected
                           ? "border-primary bg-primary text-white"
-                          : "border-foreground text-foreground"
+                          : "border-foreground/30 text-foreground"
                       }`}>
                         {count}
                       </span>
@@ -339,9 +410,8 @@ export default function Feed({ events }: { events: EventCard[] }) {
               </div>
             </div>
 
-            <aside className="relative flex min-h-[35rem] flex-col justify-between overflow-hidden bg-primary p-5 text-white sm:p-10 lg:p-12">
-              <div aria-hidden="true" className="paper-grid absolute inset-0 opacity-15 text-white pointer-events-none" />
-
+            {/* Live City Dossier Rail */}
+            <aside className="relative flex min-h-[35rem] flex-col justify-between overflow-hidden bg-primary p-5 text-white sm:p-10 lg:p-12 shadow-[4px_4px_0px_0px_currentColor]">
               <div className="relative flex items-start justify-between gap-4 border-b border-white/40 pb-4">
                 <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em]">
                   <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 256 256" className="size-4">
@@ -375,7 +445,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
                   <div>
                     <p className="text-sm font-semibold">Open registrations</p>
                     <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.14em] text-white/70">
-                      Verified and accepting entries now
+                      Verified external host links
                     </p>
                   </div>
                 </div>
@@ -386,15 +456,20 @@ export default function Feed({ events }: { events: EventCard[] }) {
                   ))}
                 </div>
 
-                <Link
-                  href={`/cities`}
-                  className="flex min-h-12 items-center justify-between border border-foreground bg-background px-5 text-xs font-semibold uppercase tracking-[0.12em] text-foreground transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 shadow-[2px_2px_0px_0px_#000]"
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCity(selectedCityDesk);
+                    const el = document.getElementById("radar-index");
+                    el?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="flex w-full min-h-12 items-center justify-between border border-foreground bg-background px-5 text-xs font-semibold uppercase tracking-[0.12em] text-foreground transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 shadow-[2px_2px_0px_0px_#000]"
                 >
-                  <span>Open {selectedCityDesk} index</span>
+                  <span>Filter {selectedCityDesk} events</span>
                   <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 256 256">
                     <path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z" />
                   </svg>
-                </Link>
+                </button>
               </div>
             </aside>
           </div>
@@ -403,7 +478,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
 
       {/* 4. Live Tech Radar Index & Interactive Filter Bar */}
       <section id="radar-index" className="mx-auto w-full max-w-[1500px] px-4 py-14 sm:px-6 lg:px-10 lg:py-20 flex-1">
-        <div className="border-b-2 border-foreground pb-8 space-y-6">
+        <div className="border-b-2 border-foreground/40 pb-8 space-y-6">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
               <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
@@ -419,7 +494,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
           </div>
 
           {/* Tech Stack Affinity Switcher */}
-          <div className="border border-foreground bg-card p-5 space-y-3">
+          <div className="border border-foreground/30 bg-card p-5 space-y-3 shadow-[2px_2px_0px_0px_currentColor]">
             <div className="flex items-center justify-between">
               <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
                 YOUR TECH STACK (CLICK TO TOGGLE AFFINITY)
@@ -437,8 +512,8 @@ export default function Feed({ events }: { events: EventCard[] }) {
                     onClick={() => toggle(t)}
                     className={`font-mono text-xs px-3 py-1 border transition-all cursor-pointer ${
                       on
-                        ? "bg-blue-600 text-white border-blue-600 shadow-[2px_2px_0px_0px_currentColor] font-bold"
-                        : "border-foreground bg-background text-foreground hover:bg-foreground hover:text-background"
+                        ? "bg-primary text-white border-primary shadow-[2px_2px_0px_0px_currentColor] font-bold"
+                        : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
                     }`}
                   >
                     {t}
@@ -448,14 +523,28 @@ export default function Feed({ events }: { events: EventCard[] }) {
             </div>
           </div>
 
-          {/* Search & City Filter Bar */}
-          <div className="grid gap-4 md:grid-cols-[1fr_auto_auto]">
+          {/* Search, GPS Near Me & City Filter Bar */}
+          <div className="grid gap-4 md:grid-cols-[1fr_auto_auto_auto]">
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search by event title, organizer, city, or tech skill…"
-              className="w-full h-11 bg-background border border-foreground px-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary outline-none font-mono"
+              className="w-full h-11 bg-background border border-foreground/40 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary outline-none font-mono"
             />
+
+            {/* GPS Location Button */}
+            <button
+              type="button"
+              onClick={handleNearMe}
+              disabled={locating}
+              title="Detect nearest tech hub via GPS"
+              className="h-11 px-3.5 border font-mono text-xs uppercase tracking-[0.1em] transition-colors border-foreground/30 bg-card hover:border-primary text-foreground flex items-center gap-1.5 shadow-[1px_1px_0px_0px_currentColor]"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 256 256" className="size-4 text-primary">
+                <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm0-128a40,40,0,1,0,40,40A40,40,0,0,0,128,88Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,152Z" />
+              </svg>
+              <span>{locating ? "Locating…" : nearMeDetected ? `Near ${nearMeDetected}` : "Near Me"}</span>
+            </button>
 
             {/* City Filters */}
             <div className="flex flex-wrap gap-1.5 items-center">
@@ -463,10 +552,10 @@ export default function Feed({ events }: { events: EventCard[] }) {
                 <button
                   key={c}
                   onClick={() => setCity(c)}
-                  className={`h-11 px-3.5 border font-mono text-xs uppercase tracking-[0.1em] transition-colors ${
+                  className={`h-11 px-3.5 border font-mono text-xs uppercase tracking-[0.1em] transition-colors shadow-[1px_1px_0px_0px_currentColor] ${
                     city.toLowerCase() === c.toLowerCase()
                       ? "border-primary bg-primary text-white font-bold"
-                      : "border-foreground bg-background text-foreground hover:bg-foreground hover:text-background"
+                      : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
                   }`}
                 >
                   {c}
@@ -480,10 +569,10 @@ export default function Feed({ events }: { events: EventCard[] }) {
                 <button
                   key={t}
                   onClick={() => setType(t)}
-                  className={`h-11 px-3.5 border font-mono text-xs uppercase tracking-[0.1em] transition-colors ${
+                  className={`h-11 px-3.5 border font-mono text-xs uppercase tracking-[0.1em] transition-colors shadow-[1px_1px_0px_0px_currentColor] ${
                     type.toUpperCase() === t.toUpperCase()
                       ? "border-foreground bg-foreground text-background font-bold"
-                      : "border-foreground bg-background text-foreground hover:bg-foreground hover:text-background"
+                      : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
                   }`}
                 >
                   {t}
@@ -493,28 +582,30 @@ export default function Feed({ events }: { events: EventCard[] }) {
           </div>
         </div>
 
-        {/* Connected Newspaper Cards Grid */}
-        <div className="grid border-l border-t border-foreground sm:grid-cols-2 lg:grid-cols-3 mt-8">
+        {/* Spacious, Distinct Event Cards Grid */}
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-8">
           {shown.map((e, index) => {
             const padIndex = String(index + 1).padStart(2, "0");
+            // Direct official link (Luma, Devpost, GDG, or host URL)
+            const registrationUrl = (e as any).externalUrl || "https://lu.ma";
 
             return (
               <article
                 key={e.id}
                 id={`event-${e.id}`}
-                className="group min-h-[22rem] border-b border-r border-foreground bg-card transition-all flex flex-col justify-between p-6 sm:p-7 hover:bg-zinc-100 dark:hover:bg-zinc-900/80"
+                className="group min-h-[22rem] border border-foreground/30 bg-card transition-all flex flex-col justify-between p-6 sm:p-7 hover:border-primary hover:bg-background shadow-[2px_2px_0px_0px_currentColor]"
               >
                 <div>
                   {/* Top card row */}
-                  <div className="flex items-center justify-between border-b border-foreground/30 pb-3 mb-4">
+                  <div className="flex items-center justify-between border-b border-foreground/20 pb-3 mb-4">
                     <span className="font-heading text-4xl italic text-muted-foreground group-hover:text-primary transition-colors">
                       {padIndex}
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-[10px] font-semibold uppercase px-2 py-0.5 border border-foreground bg-background text-foreground">
+                      <span className="font-mono text-[10px] font-semibold uppercase px-2 py-0.5 border border-foreground/40 bg-background text-foreground">
                         {e.type}
                       </span>
-                      <span className="font-mono text-[10px] font-semibold uppercase px-2 py-0.5 border border-blue-500 bg-blue-500/10 text-blue-500">
+                      <span className="font-mono text-[10px] font-semibold uppercase px-2 py-0.5 border border-primary bg-primary/10 text-primary">
                         {e.city}
                       </span>
                     </div>
@@ -551,15 +642,27 @@ export default function Feed({ events }: { events: EventCard[] }) {
                   </div>
                 </div>
 
-                {/* Bottom Card Footer */}
-                <div className="mt-6 border-t border-foreground/30 pt-4 flex items-center justify-between">
-                  <RsvpButton eventId={e.id} />
-                  <Link
-                    href={`/passport`}
+                {/* Bottom Card Footer: Direct Official Registration Link */}
+                <div className="mt-6 border-t border-foreground/20 pt-4 flex items-center justify-between">
+                  <a
+                    href={registrationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 h-10 border border-foreground bg-primary px-4 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-white hover:bg-blue-600 transition-all shadow-[2px_2px_0px_0px_currentColor] active:translate-x-0.5 active:translate-y-0.5"
+                  >
+                    <span>Register on Host</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 256 256" className="size-3.5">
+                      <path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z" />
+                    </svg>
+                  </a>
+                  <a
+                    href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(e.title)}&location=${encodeURIComponent(e.venue || e.city)}&details=${encodeURIComponent(e.description || "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="font-mono text-[11px] text-foreground hover:text-primary uppercase tracking-[0.1em] transition-colors"
                   >
-                    Pass &rarr;
-                  </Link>
+                    + Calendar
+                  </a>
                 </div>
               </article>
             );
@@ -567,7 +670,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
         </div>
 
         {shown.length === 0 && (
-          <div className="border-2 border-foreground bg-card p-16 text-center mt-8">
+          <div className="border-2 border-foreground/30 bg-card p-16 text-center mt-8 shadow-[2px_2px_0px_0px_currentColor]">
             <p className="font-heading text-3xl text-foreground">No events matched your filters.</p>
             <p className="font-mono text-xs text-muted-foreground mt-2">
               Try adjusting your tech stack chips or city selection.
@@ -577,9 +680,9 @@ export default function Feed({ events }: { events: EventCard[] }) {
       </section>
 
       {/* 5. Format Arena Section */}
-      <section className="border-b-2 border-foreground">
+      <section className="border-b-2 border-foreground/40">
         <div className="mx-auto max-w-[1500px] px-4 py-14 sm:px-6 lg:px-10 lg:py-20">
-          <div className="flex flex-col justify-between gap-5 border-b-2 border-foreground pb-5 sm:flex-row sm:items-end">
+          <div className="flex flex-col justify-between gap-5 border-b-2 border-foreground/30 pb-5 sm:flex-row sm:items-end">
             <div>
               <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
                 Browse by format
@@ -593,7 +696,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 mt-8">
             {[
               { title: "Hackathons", count: "26 open", desc: "Build fast. Ship something real.", category: "HACKATHON" },
               { title: "Conferences", count: "14 open", desc: "Big rooms, new ideas, useful people.", category: "CONFERENCE" },
@@ -605,8 +708,12 @@ export default function Feed({ events }: { events: EventCard[] }) {
               <button
                 key={f.title}
                 type="button"
-                onClick={() => setType(f.category)}
-                className="group relative min-h-64 border-b border-foreground p-6 text-left transition-colors hover:bg-foreground hover:text-background sm:border-r sm:p-8"
+                onClick={() => {
+                  setType(f.category);
+                  const el = document.getElementById("radar-index");
+                  el?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="group relative min-h-64 border border-foreground/30 bg-card p-6 text-left transition-all hover:border-primary hover:bg-foreground hover:text-background sm:p-8 shadow-[2px_2px_0px_0px_currentColor]"
               >
                 <div className="flex items-start justify-between">
                   <span className="font-mono text-[10px] font-bold text-primary group-hover:text-background uppercase tracking-widest">
@@ -636,7 +743,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
       </section>
 
       {/* 6. How The Desk Works Section */}
-      <section className="border-b-2 border-foreground bg-card">
+      <section className="border-b-2 border-foreground/40 bg-card">
         <div className="mx-auto max-w-[1500px] px-4 py-16 sm:px-6 lg:px-10 lg:py-24">
           <div className="grid gap-10 lg:grid-cols-[.65fr_1.35fr]">
             <div>
@@ -647,8 +754,8 @@ export default function Feed({ events }: { events: EventCard[] }) {
                 Signal over noise.
               </h2>
             </div>
-            <div className="border-t-2 border-foreground">
-              <article className="grid gap-4 border-b border-foreground py-7 sm:grid-cols-[3rem_10rem_1fr] sm:items-start">
+            <div className="border-t-2 border-foreground/30">
+              <article className="grid gap-4 border-b border-foreground/20 py-7 sm:grid-cols-[3rem_10rem_1fr] sm:items-start">
                 <span className="font-heading text-3xl italic text-primary">I</span>
                 <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground">
                   DISCOVERY
@@ -658,12 +765,12 @@ export default function Feed({ events }: { events: EventCard[] }) {
                     One national signal.
                   </h3>
                   <p className="mt-2 max-w-[58ch] text-sm leading-relaxed text-muted-foreground">
-                    Devpost, Luma, Unstop, Eventbrite and university societies are gathered into one continuously updated dispatch.
+                    Devpost, Luma, GDG, Unstop, and campus societies are aggregated into one continuously updated dispatch.
                   </p>
                 </div>
               </article>
 
-              <article className="grid gap-4 border-b border-foreground py-7 sm:grid-cols-[3rem_10rem_1fr] sm:items-start">
+              <article className="grid gap-4 border-b border-foreground/20 py-7 sm:grid-cols-[3rem_10rem_1fr] sm:items-start">
                 <span className="font-heading text-3xl italic text-primary">II</span>
                 <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground">
                   CURATION
@@ -685,10 +792,10 @@ export default function Feed({ events }: { events: EventCard[] }) {
                 </p>
                 <div>
                   <h3 className="font-heading text-2xl font-semibold tracking-[-0.02em] text-foreground">
-                    1-Tap DevPassport & QR passes.
+                    Direct Official Host Link.
                   </h3>
                   <p className="mt-2 max-w-[58ch] text-sm leading-relaxed text-muted-foreground">
-                    RSVP in one tap, save tamper-evident QR tickets, and check in offline at the gate in seconds.
+                    One click takes you straight to the verified host page on Luma, Devpost, or Google Developer Groups.
                   </p>
                 </div>
               </article>

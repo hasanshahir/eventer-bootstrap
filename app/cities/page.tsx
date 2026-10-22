@@ -141,31 +141,31 @@ const REGIONAL_DIVISIONS: Region[] = [
   },
   {
     id: "05",
-    name: "Balochistan, AJK & Gilgit-Baltistan",
+    name: "Balochistan & Emerging",
     desks: [
       {
         slug: "quetta",
         city: "Quetta",
         tag: "Balochistan Tech Hub",
-        note: "BUITEMS & UoB",
-      },
-      {
-        slug: "muzaffarabad",
-        city: "Muzaffarabad",
-        tag: "AJK State Capital",
-        note: "University of AJK",
-      },
-      {
-        slug: "mirpur",
-        city: "Mirpur",
-        tag: "Kashmir Tech Valley",
-        note: "MUST Mirpur",
+        note: "BUITEMS & UoB Hub",
       },
       {
         slug: "gilgit",
         city: "Gilgit",
-        tag: "Northern Digital Circuit",
-        note: "Karakoram International Univ",
+        tag: "Active Tech Community",
+        note: "No open listings right now. This desk is ready for the next community dispatch.",
+      },
+      {
+        slug: "muzaffarabad",
+        city: "Muzaffarabad",
+        tag: "Active Tech Community",
+        note: "No open listings right now. This desk is ready for the next community dispatch.",
+      },
+      {
+        slug: "gwadar",
+        city: "Gwadar",
+        tag: "Active Tech Community",
+        note: "No open listings right now. This desk is ready for the next community dispatch.",
       },
     ],
   },
@@ -179,6 +179,7 @@ export default async function CitiesPage() {
     events = [];
   }
 
+  // Count active events per city
   const counts: Record<string, number> = {};
   for (const e of events) {
     const c = (e.city || "").trim().toLowerCase();
@@ -205,7 +206,7 @@ export default async function CitiesPage() {
             <div className="relative">
               {/* Meta Wire Ribbon */}
               <div className="flex flex-wrap items-center justify-between gap-3 border-y border-foreground/30 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em]">
-                <span className="flex items-center gap-2 text-blue-500">
+                <span className="flex items-center gap-2 text-primary">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="1em"
@@ -224,49 +225,49 @@ export default async function CitiesPage() {
               {/* Large Headline */}
               <h1 className="mt-9 max-w-[12ch] font-heading text-[clamp(3.5rem,8vw,7.5rem)] font-medium leading-[0.85] tracking-[-0.05em] text-foreground">
                 Find your local
-                <span className="block italic text-blue-500 dark:text-blue-400">
+                <span className="block italic text-primary">
                   tech signal.
                 </span>
               </h1>
 
               {/* Editorial Description */}
-              <p className="mt-8 max-w-[55ch] border-l-4 border-blue-500 pl-4 text-sm font-medium leading-relaxed sm:text-base text-foreground/80">
+              <p className="mt-8 max-w-[55ch] border-l-4 border-primary pl-4 text-sm font-medium leading-relaxed sm:text-base text-foreground/80">
                 Follow university circuits, independent communities, developer meetups and open competitions from Karachi to Gilgit—and every active desk between.
               </p>
             </div>
           </div>
 
           {/* Right Rail: National Directory Ledger */}
-          <aside className="flex flex-col justify-between bg-zinc-900 text-white dark:bg-zinc-950 p-6 sm:p-10 lg:p-12 border-t lg:border-t-0 border-foreground/30">
+          <aside className="flex flex-col justify-between bg-foreground text-background dark:bg-card dark:text-foreground dark:border-t-0 dark:border-l dark:border-foreground/30 p-6 sm:p-10 lg:p-12 border-t lg:border-t-0 border-foreground/30">
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-400">
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-background/60 dark:text-muted-foreground">
                 Directory ledger
               </p>
-              <h2 className="mt-2 font-heading text-4xl italic text-white">
+              <h2 className="mt-2 font-heading text-4xl italic text-background dark:text-foreground">
                 National coverage
               </h2>
             </div>
 
-            <dl className="mt-12 divide-y divide-zinc-800 border-y border-zinc-800">
+            <dl className="mt-12 divide-y divide-background/20 dark:divide-foreground/20 border-y border-background/20 dark:border-foreground/20">
               <div className="flex items-end justify-between py-6">
-                <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-400">
+                <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-background/60 dark:text-muted-foreground">
                   Listed city desks
                 </dt>
-                <dd className="font-heading text-6xl text-blue-400 font-bold">
+                <dd className="font-heading text-6xl text-primary font-bold">
                   {totalDesks}
                 </dd>
               </div>
               <div className="flex items-end justify-between py-6">
-                <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-400">
+                <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-background/60 dark:text-muted-foreground">
                   Indexed events
                 </dt>
-                <dd className="font-heading text-6xl text-white font-bold">
+                <dd className="font-heading text-6xl text-background dark:text-foreground font-bold">
                   {totalEvents}
                 </dd>
               </div>
             </dl>
 
-            <p className="mt-8 font-mono text-[9px] uppercase leading-relaxed tracking-[0.13em] text-zinc-400">
+            <p className="mt-8 font-mono text-[9px] uppercase leading-relaxed tracking-[0.13em] text-background/60 dark:text-muted-foreground">
               City counts reflect currently indexed registrations and update as source feeds are scanned.
             </p>
           </aside>
@@ -277,7 +278,7 @@ export default async function CitiesPage() {
       <main className="mx-auto w-full max-w-[1500px] flex-1 px-4 py-12 sm:px-6 lg:px-10 lg:py-20">
         <div className="mb-12 flex flex-col justify-between gap-4 border-b-2 border-foreground/40 pb-5 sm:flex-row sm:items-end">
           <div>
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-500">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
               Regional desks / 05 editions
             </p>
             <h2 className="mt-2 font-heading text-4xl font-medium tracking-[-0.04em] sm:text-6xl text-foreground">
@@ -289,13 +290,13 @@ export default async function CitiesPage() {
           </p>
         </div>
 
-        {/* 5 Regional Sections */}
+        {/* 5 Province & Territory Divisions */}
         <div className="space-y-16">
           {REGIONAL_DIVISIONS.map((region) => (
             <section key={region.id} aria-labelledby={`region-${region.id}`}>
-              {/* Region Bar */}
+              {/* Region Header Ribbon */}
               <div className="grid grid-cols-[3rem_1fr_auto] items-end gap-3 border-b-2 border-foreground/40 pb-3">
-                <span className="font-mono text-xs font-bold text-blue-500">
+                <span className="font-mono text-xs font-bold text-primary">
                   {region.id}
                 </span>
                 <h2
@@ -322,19 +323,19 @@ export default async function CitiesPage() {
                   return (
                     <article
                       key={desk.slug}
-                      className="group min-h-[18rem] border-b border-r border-foreground/30 bg-card transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-900/90"
+                      className="group min-h-[18rem] border-b border-r border-foreground/30 bg-card transition-colors hover:bg-background"
                     >
                       <Link
                         href={`/?city=${encodeURIComponent(desk.city)}`}
-                        className="flex h-full min-h-[18rem] flex-col p-5 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 sm:p-6"
+                        className="flex h-full min-h-[18rem] flex-col p-5 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:p-6"
                         aria-label={`View events in ${desk.city}`}
                       >
                         {/* Top Card Row */}
                         <div className="flex items-start justify-between border-b border-foreground/30 pb-4">
-                          <span className="font-heading text-4xl italic text-muted-foreground/70 group-hover:text-blue-500 transition-colors">
+                          <span className="font-heading text-4xl italic text-muted-foreground/70 group-hover:text-primary transition-colors">
                             {deskNumber}
                           </span>
-                          <span className="grid size-11 place-items-center border border-foreground/30 bg-background text-blue-500 transition-transform group-hover:scale-105">
+                          <span className="grid size-11 place-items-center border border-foreground/30 bg-background text-primary transition-transform group-hover:scale-105">
                             {desk.isVirtual ? (
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -364,7 +365,7 @@ export default async function CitiesPage() {
                         {/* Mid Card Content */}
                         <div className="flex flex-1 flex-col justify-between py-5">
                           <div>
-                            <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-blue-500">
+                            <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-primary">
                               {desk.tag}
                             </p>
                             <h3 className="mt-3 font-heading text-4xl font-semibold leading-none tracking-[-0.04em] text-foreground transition-transform group-hover:translate-x-1">
@@ -378,7 +379,7 @@ export default async function CitiesPage() {
                           {/* Bottom Card Footer */}
                           <div className="mt-6 flex items-end justify-between border-t border-foreground/30 pt-4">
                             <div>
-                              <span className="block font-heading text-4xl font-semibold text-blue-500">
+                              <span className="block font-heading text-4xl font-semibold text-primary">
                                 {eventCount}
                               </span>
                               <span className="font-mono text-[8px] uppercase tracking-[0.13em] text-muted-foreground">
@@ -390,7 +391,7 @@ export default async function CitiesPage() {
                               </span>
                             </div>
 
-                            <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-foreground group-hover:text-blue-500 transition-colors">
+                            <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-foreground group-hover:text-primary transition-colors">
                               <span>{hasEvents ? "Open desk" : "View empty desk"}</span>
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -412,34 +413,6 @@ export default async function CitiesPage() {
               </div>
             </section>
           ))}
-        </div>
-
-        {/* Suggest Community Callout */}
-        <div className="mt-20 border-2 border-foreground/40 bg-card p-6 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6 transition-colors">
-          <div>
-            <h3 className="font-heading text-3xl font-semibold text-foreground">
-              Don&apos;t see your campus or city desk?
-            </h3>
-            <p className="mt-1 font-mono text-xs text-muted-foreground">
-              Suggest a university society, community meetup, or upcoming olympiad to index on the national wire.
-            </p>
-          </div>
-          <Link
-            href="/organizer/new"
-            className="shrink-0 inline-flex items-center gap-2 h-11 border border-foreground bg-blue-600 px-6 text-xs font-semibold uppercase tracking-[0.12em] text-white hover:bg-blue-500 transition-colors shadow-[0_0_20px_-4px_rgba(37,99,235,0.5)]"
-          >
-            <span>+ Submit an Event</span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="1em"
-              height="1em"
-              fill="currentColor"
-              viewBox="0 0 256 256"
-              className="size-3.5"
-            >
-              <path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z" />
-            </svg>
-          </Link>
         </div>
       </main>
     </div>
