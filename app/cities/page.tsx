@@ -184,7 +184,7 @@ export default async function CitiesPage() {
   for (const e of events) {
     const c = (e.city || "").trim().toLowerCase();
     counts[c] = (counts[c] ?? 0) + 1;
-    if (c === "remote" || c === "online") {
+    if (c === "remote" || c === "online" || c.includes("global") || c.includes("virtual")) {
       counts["online"] = (counts["online"] ?? 0) + 1;
     }
   }
@@ -322,7 +322,7 @@ export default async function CitiesPage() {
                       className="group min-h-[18rem] border border-foreground/30 bg-card transition-all flex flex-col p-5 sm:p-6 hover:border-primary hover:bg-background shadow-[2px_2px_0px_0px_currentColor]"
                     >
                       <Link
-                        href={`/?city=${encodeURIComponent(desk.city)}`}
+                        href={desk.isVirtual ? "/?scope=global" : `/?city=${encodeURIComponent(desk.city)}`}
                         className="flex h-full min-h-[18rem] flex-col outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
                         aria-label={`View events in ${desk.city}`}
                       >

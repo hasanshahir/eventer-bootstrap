@@ -64,6 +64,12 @@ const CITY_DOSSIERS: Record<string, { latLng: string; subtitle: string; tags: st
     tags: ["#Engineering", "#IoT", "#Python"],
     desc: "Mehran UET and Sindh University technology competitions.",
   },
+  Sukkur: {
+    latLng: "27.7052° N / 68.8574° E",
+    subtitle: "Upper Sindh Tech Oasis",
+    tags: ["#Fintech", "#AI", "#CampusHack"],
+    desc: "Sukkur IBA University and regional Sindh developer initiatives.",
+  },
   Online: {
     latLng: "Nationwide / Global Circuit",
     subtitle: "Virtual Hackathons & Summits",
@@ -82,6 +88,7 @@ const PAK_COORDS: Record<string, { lat: number; lng: number }> = {
   Multan: { lat: 30.1575, lng: 71.5249 },
   Quetta: { lat: 30.1798, lng: 66.975 },
   Hyderabad: { lat: 25.396, lng: 68.3578 },
+  Sukkur: { lat: 27.7052, lng: 68.8574 },
 };
 
 function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -159,16 +166,39 @@ export default function Feed({ events }: { events: EventCard[] }) {
     } catch {}
   }, []);
 
-  // Sync city filter dynamically whenever URL parameters change
+  // Sync city & scope filters dynamically whenever URL parameters change
   useEffect(() => {
     const c = params.get("city");
+    const s = params.get("scope");
+    if (s) {
+      const upper = s.toUpperCase();
+      if (upper === "PAKISTAN" || upper === "GLOBAL" || upper === "ALL") {
+        setScope(upper as any);
+      }
+    }
     if (c) {
-      setCity(c);
-      setSelectedCityDesk(c);
-    } else {
+      if (c.toLowerCase().includes("online") || c.toLowerCase().includes("virtual") || c.toLowerCase().includes("global")) {
+        setCity("Online");
+        setSelectedCityDesk("Online");
+        setScope("GLOBAL");
+      } else {
+        setCity(c);
+        setSelectedCityDesk(c);
+        setScope("PAKISTAN");
+      }
+    } else if (!s) {
       setCity("All");
     }
   }, [params]);
+
+  function handleScopeChange(nextScope: "ALL" | "PAKISTAN" | "GLOBAL") {
+    setScope(nextScope);
+    if (nextScope === "PAKISTAN" && city.toLowerCase() === "online") {
+      setCity("All");
+    } else if (nextScope === "GLOBAL" && city !== "All" && city.toLowerCase() !== "online") {
+      setCity("All");
+    }
+  }
 
   function toggle(t: string) {
     const next = stack.includes(t) ? stack.filter((x) => x !== t) : [...stack, t];
@@ -209,6 +239,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
         }
         setCity(nearestCity);
         setSelectedCityDesk(nearestCity);
+        setScope("PAKISTAN");
         setGpsStatus(`Near ${nearestCity} (~${Math.round(minDistance)}km)`);
         const el = document.getElementById("radar-index");
         el?.scrollIntoView({ behavior: "smooth" });
@@ -221,7 +252,27 @@ export default function Feed({ events }: { events: EventCard[] }) {
     );
   }
 
-  const cities = ["All", ...Array.from(new Set(feedEvents.map((e) => e.city)))];
+  // City buttons for the filter bar:
+  // When scope is PAKISTAN: list only Pakistani cities that have events
+  // When scope is GLOBAL: list "All" and "Online"
+  // When scope is ALL: list "All", "Online", and Pakistani cities
+  const cities = useMemo(() => {
+    if (scope === "GLOBAL") {
+      return ["All", "Online"];
+    }
+    const pkCities = Array.from(
+      new Set(
+        feedEvents
+          .filter((e) => e.scope !== "global" && !e.city.toLowerCase().includes("global") && !e.city.toLowerCase().includes("virtual") && !e.city.toLowerCase().includes("online"))
+          .map((e) => e.city)
+      )
+    ).sort();
+    if (scope === "PAKISTAN") {
+      return ["All", ...pkCities];
+    }
+    return ["All", "Online", ...pkCities];
+  }, [feedEvents, scope]);
+
   const types = ["All", ...Array.from(new Set(feedEvents.map((e) => e.type)))];
 
   const devpostCount = feedEvents.filter((e) => e.source === "devpost" || e.url.includes("devpost.com")).length;
@@ -230,48 +281,69 @@ export default function Feed({ events }: { events: EventCard[] }) {
   const campusCount = feedEvents.filter((e) => e.source === "campus" || e.url.includes("unstop.com")).length;
 
   const pakistanEventsCount = feedEvents.filter(
-    (e) => e.scope !== "global" && !e.city.toLowerCase().includes("global") && !e.city.toLowerCase().includes("virtual")
+    (e) => e.scope !== "global" && !e.city.toLowerCase().includes("global") && !e.city.toLowerCase().includes("virtual") && !e.city.toLowerCase().includes("online")
   ).length;
 
   const globalEventsCount = feedEvents.filter(
-    (e) => e.scope === "global" || e.city.toLowerCase().includes("global") || e.city.toLowerCase().includes("virtual")
+    (e) => e.scope === "global" || e.city.toLowerCase().includes("global") || e.city.toLowerCase().includes("virtual") || e.city.toLowerCase().includes("online")
   ).length;
 
   const shown = useMemo(
     () =>
       feedEvents.filter((e) => {
-        // Scope Filter
-        if (scope === "PAKISTAN") {
-          const isGlobal =
-            e.scope === "global" ||
-            e.city.toLowerCase().includes("global") ||
-            e.city.toLowerCase().includes("virtual");
-          if (isGlobal) return false;
-        } else if (scope === "GLOBAL") {
-          const isGlobal =
-            e.scope === "global" ||
-            e.city.toLowerCase().includes("global") ||
-            e.city.toLowerCase().includes("virtual");
-          if (!isGlobal) return false;
-        }
+        const isGlobal =
+          e.scope === "global" ||
+          e.city.toLowerCase().includes("global") ||
+          e.city.toLowerCase().includes("virtual") ||
+          e.city.toLowerCase().includes("online");
 
-        const matchesCity = city === "All" || e.city.toLowerCase() === city.toLowerCase();
+        // 1. Scope Filter
+        if (scope === "PAKISTAN" && isGlobal) return false;
+        if (scope === "GLOBAL" && !isGlobal) return false;
+
+        // 2. City Filter (Strict isolation: local cities only match local events)
+        let matchesCity = city === "All";
+        if (!matchesCity) {
+          if (city.toLowerCase() === "online") {
+            matchesCity = isGlobal;
+          } else {
+            matchesCity = !isGlobal && e.city.toLowerCase() === city.toLowerCase();
+          }
+        }
+        if (!matchesCity) return false;
+
+        // 3. Format / Type Filter
         const matchesType = type === "All" || e.type.toUpperCase() === type.toUpperCase();
+        if (!matchesType) return false;
+
+        // 4. Saved Bookmarks
         const matchesSaved = !showSavedOnly || bookmarks.includes(e.id);
+        if (!matchesSaved) return false;
+
+        // 5. Search Query
         const matchesQ =
           !q ||
-          (e.title + e.organizer + e.city + e.description + e.tags.join(" "))
+          (e.title + " " + e.organizer + " " + e.city + " " + e.description + " " + e.tags.join(" "))
             .toLowerCase()
             .includes(q.toLowerCase());
-        return matchesCity && matchesType && matchesSaved && matchesQ;
+        return matchesQ;
       }),
     [feedEvents, scope, city, type, q, showSavedOnly, bookmarks]
   );
 
   const activeDossier = CITY_DOSSIERS[selectedCityDesk] || CITY_DOSSIERS["Karachi"];
-  const activeCityCount = feedEvents.filter(
-    (e) => e.city.toLowerCase() === selectedCityDesk.toLowerCase()
-  ).length;
+  const activeCityCount = feedEvents.filter((e) => {
+    if (selectedCityDesk === "Online") {
+      return e.scope === "global" || e.city.toLowerCase().includes("global") || e.city.toLowerCase().includes("virtual") || e.city.toLowerCase().includes("online");
+    }
+    return (
+      e.city.toLowerCase() === selectedCityDesk.toLowerCase() &&
+      e.scope !== "global" &&
+      !e.city.toLowerCase().includes("global") &&
+      !e.city.toLowerCase().includes("virtual") &&
+      !e.city.toLowerCase().includes("online")
+    );
+  }).length;
 
   return (
     <div className="editorial-shell flex min-h-dvh flex-col bg-background text-foreground transition-colors duration-200">
@@ -454,19 +526,38 @@ export default function Feed({ events }: { events: EventCard[] }) {
                   "Multan",
                   "Quetta",
                   "Hyderabad",
+                  "Sukkur",
                   "Online",
                 ].map((cName, i) => {
                   const isSelected = selectedCityDesk.toLowerCase() === cName.toLowerCase();
-                  const count =
-                    events.filter((e) => e.city.toLowerCase() === cName.toLowerCase()).length ||
-                    (cName === "Karachi" ? 40 : cName === "Lahore" ? 27 : cName === "Islamabad" ? 22 : cName === "Hyderabad" ? 16 : cName === "Online" ? 964 : 1);
+                  const count = feedEvents.filter((e) => {
+                    if (cName === "Online") {
+                      return e.scope === "global" || e.city.toLowerCase().includes("global") || e.city.toLowerCase().includes("virtual") || e.city.toLowerCase().includes("online");
+                    }
+                    return (
+                      e.city.toLowerCase() === cName.toLowerCase() &&
+                      e.scope !== "global" &&
+                      !e.city.toLowerCase().includes("global") &&
+                      !e.city.toLowerCase().includes("virtual") &&
+                      !e.city.toLowerCase().includes("online")
+                    );
+                  }).length;
 
                   return (
                     <button
                       key={cName}
                       type="button"
-                      onClick={() => setSelectedCityDesk(cName)}
-                      className={`group grid min-h-20 grid-cols-[2rem_1fr_auto] items-center gap-2 border px-4 py-3 text-left outline-none transition-all shadow-[2px_2px_0px_0px_currentColor] ${
+                      onClick={() => {
+                        setSelectedCityDesk(cName);
+                        if (cName === "Online") {
+                          setScope("GLOBAL");
+                          setCity("Online");
+                        } else {
+                          setScope("PAKISTAN");
+                          setCity(cName);
+                        }
+                      }}
+                      className={`group grid min-h-20 grid-cols-[2rem_1fr_auto] items-center gap-2 border px-4 py-3 text-left outline-none transition-all shadow-[2px_2px_0px_0px_currentColor] cursor-pointer ${
                         isSelected
                           ? "bg-foreground text-background border-foreground font-bold"
                           : "border-foreground/30 bg-card hover:border-primary text-foreground"
@@ -526,7 +617,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
               <div className="relative">
                 <div className="grid grid-cols-[auto_1fr] gap-5 border-y border-white/40 py-5">
                   <span className="font-heading text-6xl font-semibold">
-                    {activeCityCount || 1}
+                    {activeCityCount}
                   </span>
                   <div>
                     <p className="text-sm font-semibold">Open registrations</p>
@@ -545,11 +636,17 @@ export default function Feed({ events }: { events: EventCard[] }) {
                 <button
                   type="button"
                   onClick={() => {
-                    setCity(selectedCityDesk);
+                    if (selectedCityDesk === "Online") {
+                      setScope("GLOBAL");
+                      setCity("Online");
+                    } else {
+                      setScope("PAKISTAN");
+                      setCity(selectedCityDesk);
+                    }
                     const el = document.getElementById("radar-index");
                     el?.scrollIntoView({ behavior: "smooth" });
                   }}
-                  className="flex w-full min-h-12 items-center justify-between border border-foreground bg-background px-5 text-xs font-semibold uppercase tracking-[0.12em] text-foreground transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 shadow-[2px_2px_0px_0px_#000]"
+                  className="flex w-full min-h-12 items-center justify-between border border-foreground bg-background px-5 text-xs font-semibold uppercase tracking-[0.12em] text-foreground transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 shadow-[2px_2px_0px_0px_#000] cursor-pointer"
                 >
                   <span>Filter {selectedCityDesk} events</span>
                   <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 256 256">
@@ -599,7 +696,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
             </span>
             <button
               type="button"
-              onClick={() => setScope("ALL")}
+              onClick={() => handleScopeChange("ALL")}
               className={`h-9 px-3.5 border font-mono text-xs uppercase tracking-[0.1em] transition-all shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${
                 scope === "ALL"
                   ? "border-primary bg-primary text-white font-bold"
@@ -610,7 +707,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
             </button>
             <button
               type="button"
-              onClick={() => setScope("PAKISTAN")}
+              onClick={() => handleScopeChange("PAKISTAN")}
               className={`h-9 px-3.5 border font-mono text-xs uppercase tracking-[0.1em] transition-all shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${
                 scope === "PAKISTAN"
                   ? "border-primary bg-primary text-white font-bold"
@@ -621,7 +718,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
             </button>
             <button
               type="button"
-              onClick={() => setScope("GLOBAL")}
+              onClick={() => handleScopeChange("GLOBAL")}
               className={`h-9 px-3.5 border font-mono text-xs uppercase tracking-[0.1em] transition-all shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${
                 scope === "GLOBAL"
                   ? "border-primary bg-primary text-white font-bold"
@@ -677,7 +774,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
                 type="button"
                 onClick={detectLocation}
                 title="Detect nearest tech hub via GPS"
-                className="h-11 px-4 border font-mono text-xs uppercase tracking-[0.1em] transition-all border-foreground/30 bg-card hover:border-primary text-foreground flex items-center justify-center gap-2 shadow-[1px_1px_0px_0px_currentColor] active:translate-x-0.5 active:translate-y-0.5"
+                className="h-11 px-4 border font-mono text-xs uppercase tracking-[0.1em] transition-all border-foreground/30 bg-card hover:border-primary text-foreground flex items-center justify-center gap-2 shadow-[1px_1px_0px_0px_currentColor] active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 256 256" className="size-4 text-primary">
                   <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm0-128a40,40,0,1,0,40,40A40,40,0,0,0,128,88Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,152Z" />
@@ -689,7 +786,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
               <button
                 type="button"
                 onClick={() => setShowSavedOnly(!showSavedOnly)}
-                className={`h-11 px-4 border font-mono text-xs uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-1.5 shadow-[1px_1px_0px_0px_currentColor] ${
+                className={`h-11 px-4 border font-mono text-xs uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-1.5 shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${
                   showSavedOnly
                     ? "border-primary bg-primary text-white font-bold"
                     : "border-foreground/30 bg-card text-foreground hover:border-primary"
@@ -703,23 +800,50 @@ export default function Feed({ events }: { events: EventCard[] }) {
             <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
               {/* City Filters */}
               <div className="flex flex-wrap gap-1.5 items-center">
-                <span className="font-mono text-[10px] uppercase text-muted-foreground mr-1">City:</span>
-                {cities.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => {
-                      setCity(c);
-                      if (c !== "All") setSelectedCityDesk(c);
-                    }}
-                    className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.1em] transition-colors shadow-[1px_1px_0px_0px_currentColor] ${
-                      city.toLowerCase() === c.toLowerCase()
-                        ? "border-primary bg-primary text-white font-bold"
-                        : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
-                    }`}
-                  >
-                    {c}
-                  </button>
-                ))}
+                <span className="font-mono text-[10px] uppercase text-muted-foreground mr-1">
+                  {scope === "GLOBAL" ? "Scope:" : "City / Hub:"}
+                </span>
+                {cities.map((c) => {
+                  const isCityActive =
+                    city.toLowerCase() === c.toLowerCase() ||
+                    (c === "Online" && (city.toLowerCase() === "online" || city.toLowerCase().includes("virtual")));
+
+                  const countForCity = feedEvents.filter((e) => {
+                    const isGlobal =
+                      e.scope === "global" ||
+                      e.city.toLowerCase().includes("global") ||
+                      e.city.toLowerCase().includes("virtual") ||
+                      e.city.toLowerCase().includes("online");
+
+                    if (scope === "PAKISTAN" && isGlobal) return false;
+                    if (scope === "GLOBAL" && !isGlobal) return false;
+
+                    if (c === "All") return true;
+                    if (c === "Online") return isGlobal;
+                    return !isGlobal && e.city.toLowerCase() === c.toLowerCase();
+                  }).length;
+
+                  return (
+                    <button
+                      key={c}
+                      onClick={() => {
+                        setCity(c);
+                        if (c !== "All" && c !== "Online") setSelectedCityDesk(c);
+                        else if (c === "Online") setSelectedCityDesk("Online");
+                      }}
+                      className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.1em] transition-colors shadow-[1px_1px_0px_0px_currentColor] cursor-pointer flex items-center gap-1.5 ${
+                        isCityActive
+                          ? "border-primary bg-primary text-white font-bold"
+                          : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
+                      }`}
+                    >
+                      <span>{c}</span>
+                      <span className={`text-[10px] ${isCityActive ? "text-white/80" : "text-muted-foreground"}`}>
+                        ({countForCity})
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Type Filters */}
@@ -729,7 +853,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
                   <button
                     key={t}
                     onClick={() => setType(t)}
-                    className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.1em] transition-colors shadow-[1px_1px_0px_0px_currentColor] ${
+                    className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.1em] transition-colors shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${
                       type.toUpperCase() === t.toUpperCase()
                         ? "border-foreground bg-foreground text-background font-bold"
                         : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
@@ -748,6 +872,11 @@ export default function Feed({ events }: { events: EventCard[] }) {
           {shown.map((e, index) => {
             const padIndex = String(index + 1).padStart(2, "0");
             const isSaved = bookmarks.includes(e.id);
+            const isGlobalEvent =
+              e.scope === "global" ||
+              e.city.toLowerCase().includes("global") ||
+              e.city.toLowerCase().includes("virtual") ||
+              e.city.toLowerCase().includes("online");
 
             return (
               <article
@@ -765,8 +894,14 @@ export default function Feed({ events }: { events: EventCard[] }) {
                       <span className="font-mono text-[10px] font-semibold uppercase px-2 py-0.5 border border-foreground/40 bg-background text-foreground">
                         {e.type}
                       </span>
-                      <span className="font-mono text-[10px] font-semibold uppercase px-2 py-0.5 border border-primary bg-primary/10 text-primary">
-                        {e.city}
+                      <span
+                        className={`font-mono text-[10px] font-semibold uppercase px-2 py-0.5 border ${
+                          isGlobalEvent
+                            ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-400"
+                            : "border-primary bg-primary/10 text-primary"
+                        }`}
+                      >
+                        {isGlobalEvent ? "🌐 Global Virtual" : `🇵🇰 ${e.city}`}
                       </span>
                     </div>
                   </div>

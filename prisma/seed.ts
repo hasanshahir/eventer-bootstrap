@@ -1,7 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../lib/prisma";
 import { discoverAllEvents, syncDiscoveredEventsToPrisma } from "../lib/discover-events";
-
-const prisma = new PrismaClient();
 
 async function main() {
   console.log("Cleaning up old mock and fake events...");
