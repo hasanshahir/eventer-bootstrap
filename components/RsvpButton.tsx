@@ -12,9 +12,9 @@ export default function RsvpButton({ eventId }: { eventId: string }) {
     try {
       let user = demoUser;
       try {
-        const raw = localStorage.getItem("eventer_user");
+        const raw = localStorage.getItem("eventr_user") || localStorage.getItem("eventer_user");
         if (raw) user = JSON.parse(raw);
-        else localStorage.setItem("eventer_user", JSON.stringify(demoUser));
+        else localStorage.setItem("eventr_user", JSON.stringify(demoUser));
       } catch {}
       const res = await fetch("/api/v1/registrations", {
         method: "POST",

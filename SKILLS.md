@@ -1,6 +1,6 @@
-# SKILLS.md — Implementation Playbooks for Eventer
+# SKILLS.md — Implementation Playbooks for Eventr
 
-This document contains step-by-step playbooks for implementing features in Eventer. Agents and developers must follow these patterns to maintain strict architectural and stylistic consistency.
+This document contains step-by-step playbooks for implementing features in Eventr. Agents and developers must follow these patterns to maintain strict architectural and stylistic consistency.
 
 ---
 
@@ -14,7 +14,7 @@ When creating a new route in the Next.js 14 App Router:
    import type { Metadata } from 'next';
 
    export const metadata: Metadata = {
-     title: 'Page Title — Eventer',
+     title: 'Page Title — Eventr',
      description: 'Page description matching product specs.',
    };
    ```
@@ -261,11 +261,11 @@ To generate valid, downloadable `.ics` calendar files:
      const rawLines = [
        'BEGIN:VCALENDAR',
        'VERSION:2.0',
-       'PRODID:-//Eventer Pakistan//Tech Radar//EN',
+       'PRODID:-//Eventr Pakistan//Tech Radar//EN',
        'CALSCALE:GREGORIAN',
        'METHOD:PUBLISH',
        'BEGIN:VEVENT',
-       `UID:${event.id}@eventer.pk`,
+       `UID:${event.id}@eventr.pk`,
        `DTSTAMP:${now}`,
        `DTSTART:${start}`,
        `DTEND:${end}`,

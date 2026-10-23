@@ -91,7 +91,7 @@ export default function NewEventPage() {
             Submit an Event.
           </h1>
           <p className="mt-4 max-w-[60ch] border-l-4 border-blue-600 dark:border-blue-500 pl-4 text-sm sm:text-base font-medium leading-relaxed text-slate-600 dark:text-zinc-300">
-            Paste a messy WhatsApp forward or upload an event flyer. Eventer AI automatically extracts the dates, venue, city, and tags into structured radar intelligence.
+            Paste a messy WhatsApp forward or upload an event flyer. Eventr AI automatically extracts the dates, venue, city, and tags into structured radar intelligence.
           </p>
         </div>
       </header>

@@ -11,7 +11,7 @@ export async function POST() {
       "https://devpost.com/api/hackathons?challenge_type[]=online&challenge_type[]=in-person&sort_by=submission_deadline",
       {
         headers: {
-          "User-Agent": "EventerRadar/1.0 (Pakistan Tech Community Dispatch; mailto:radar@eventer.pk)",
+          "User-Agent": "EventrRadar/1.0 (Pakistan Tech Community Dispatch; mailto:radar@eventr.pk)",
           Accept: "application/json",
         },
         cache: "no-store",

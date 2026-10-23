@@ -1,12 +1,12 @@
-# AGENTS.md — Eventer Architecture & Coding Guidelines
+# AGENTS.md — Eventr Architecture & Coding Guidelines
 
-Welcome to **Eventer**, Pakistan's AI-powered tech event radar. This document serves as the primary technical blueprint, architectural reference, and operational rulebook for AI coding agents and human contributors working on this repository.
+Welcome to **Eventr**, Pakistan's AI-powered tech event radar. This document serves as the primary technical blueprint, architectural reference, and operational rulebook for AI coding agents and human contributors working on this repository.
 
 ---
 
 ## 1. Project Overview
 
-Eventer aggregates, normalizes, and delivers real-time intelligence on developer hackathons, technical conferences, workshops, and student competitions across Pakistan (Karachi, Lahore, Islamabad, Peshawar, Faisalabad, and remote/hybrid).
+Eventr aggregates, normalizes, and delivers real-time intelligence on developer hackathons, technical conferences, workshops, and student competitions across Pakistan (Karachi, Lahore, Islamabad, Peshawar, Faisalabad, and remote/hybrid).
 
 Key capabilities to be built:
 - **Radar Feed**: City-filtered event discovery with developer-oriented categorization.

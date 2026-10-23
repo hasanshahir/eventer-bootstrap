@@ -13,7 +13,7 @@ export default function PassportPage() {
   useEffect(() => {
     let u = demoUser;
     try {
-      const r = localStorage.getItem("eventer_user");
+      const r = localStorage.getItem("eventr_user") || localStorage.getItem("eventer_user");
       if (r) u = JSON.parse(r);
     } catch {}
     setUser(u);
@@ -159,7 +159,7 @@ export default function PassportPage() {
 
                   <div className="mt-8 pt-4 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between font-mono text-[11px] text-slate-500 dark:text-zinc-500">
                     <span>Organizer: {ev.organizer || "Community Host"}</span>
-                    <span>Issued via Eventer DevPassport</span>
+                    <span>Issued via Eventr DevPassport</span>
                   </div>
                 </div>
 

@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
   const proto = req.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
 
   const res = NextResponse.redirect(`${proto}://${host}/`);
+  res.cookies.delete("eventr_auth");
   res.cookies.delete("eventer_auth");
   return res;
 }

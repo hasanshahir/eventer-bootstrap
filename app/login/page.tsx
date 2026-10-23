@@ -27,7 +27,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("eventer_user");
+      const saved = localStorage.getItem("eventr_user") || localStorage.getItem("eventer_user");
       if (saved) {
         setCurrentUser(JSON.parse(saved));
       }
@@ -39,7 +39,7 @@ export default function LoginPage() {
         if (data?.user) {
           setCurrentUser(data.user);
           try {
-            localStorage.setItem("eventer_user", JSON.stringify(data.user));
+            localStorage.setItem("eventr_user", JSON.stringify(data.user));
           } catch {}
         }
       })
@@ -72,7 +72,7 @@ export default function LoginPage() {
 
   function completeLogin(userObj: any) {
     try {
-      localStorage.setItem("eventer_user", JSON.stringify(userObj));
+      localStorage.setItem("eventr_user", JSON.stringify(userObj));
     } catch {}
 
     // Background sync to backend API (never blocks UI)
@@ -165,6 +165,7 @@ export default function LoginPage() {
 
   function handleSignOut() {
     try {
+      localStorage.removeItem("eventr_user");
       localStorage.removeItem("eventer_user");
     } catch {}
     setCurrentUser(null);
@@ -524,7 +525,7 @@ export default function LoginPage() {
               </div>
 
               <p className="mt-3 text-xs text-muted-foreground">
-                Choose a Google account to continue to HackScout radar:
+                Choose a Google account to continue to Eventr radar:
               </p>
 
               {/* Option 1: Fast Account */}

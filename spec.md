@@ -1,4 +1,4 @@
-# Eventer — Product & Technical Specification (spec.md)
+# Eventr — Product & Technical Specification (spec.md)
 
 > **AI-Powered Tech Radar for Pakistani Developers and Students**  
 > *Discover, sync, and register for nationwide hackathons, workshops, and meetups in one tap.*
@@ -21,7 +21,7 @@ The developer and student tech ecosystem in Pakistan is vibrant but deeply fragm
 - **Organizer Overhead:** Campus leads struggle with attendee verification, walk-in management, check-in congestion, and credential issuance.
 
 ### 1.2 Product Vision
-**Eventer** is a unified, intelligent tech radar that aggregates, structures, and presents verified technical events across Pakistan. Armed with multimodal AI parsing, developer-first profiles, one-tap registration, and automated calendar sync, Eventer bridges the gap between ambitious builders and transformative opportunities.
+**Eventr** is a unified, intelligent tech radar that aggregates, structures, and presents verified technical events across Pakistan. Armed with multimodal AI parsing, developer-first profiles, one-tap registration, and automated calendar sync, Eventr bridges the gap between ambitious builders and transformative opportunities.
 
 ---
 
@@ -39,7 +39,7 @@ The developer and student tech ecosystem in Pakistan is vibrant but deeply fragm
 
 ```
 +-----------------------------------------------------------------------+
-|                              EVENTER RADAR                            |
+|                              EVENTR RADAR                             |
 +-----------------------------------------------------------------------+
         |                                       |
         v                                       v

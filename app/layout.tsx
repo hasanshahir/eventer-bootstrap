@@ -3,7 +3,7 @@ import Navbar from '@/components/Navbar';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'HackScout — Pakistan’s Developer & Tech Event Hub',
+  title: 'Eventr — Pakistan’s Developer & Tech Event Hub',
   description: 'Every hackathon, developer conference, workshop, and meetup across Pakistan. Curated by city, sorted by registration deadlines.',
 };
 
@@ -47,7 +47,7 @@ export default function RootLayout({
           <div className="mx-auto max-w-[1500px] px-4 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-[10px] uppercase tracking-[0.14em]">
             <span className="flex items-center gap-2 text-foreground">
               <span className="size-2 rounded-full bg-primary animate-pulse" />
-              HackScout Pakistan &bull; National Tech Signal
+              Eventr Pakistan &bull; National Tech Signal
             </span>
             <span>All rights reserved &bull; 2026</span>
           </div>

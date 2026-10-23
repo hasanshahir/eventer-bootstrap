@@ -156,12 +156,12 @@ export default function Feed({ events }: { events: EventCard[] }) {
 
   useEffect(() => {
     try {
-      const s = localStorage.getItem("eventer_stack");
+      const s = localStorage.getItem("eventr_stack") || localStorage.getItem("eventer_stack");
       if (s) setStack(JSON.parse(s));
-      const b = localStorage.getItem("eventer_bookmarks");
+      const b = localStorage.getItem("eventr_bookmarks") || localStorage.getItem("eventer_bookmarks");
       if (b) setBookmarks(JSON.parse(b));
-      if (!localStorage.getItem("eventer_user")) {
-        localStorage.setItem("eventer_user", JSON.stringify(demoUser));
+      if (!localStorage.getItem("eventr_user") && !localStorage.getItem("eventer_user")) {
+        localStorage.setItem("eventr_user", JSON.stringify(demoUser));
       }
     } catch {}
   }, []);
@@ -204,7 +204,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
     const next = stack.includes(t) ? stack.filter((x) => x !== t) : [...stack, t];
     setStack(next);
     try {
-      localStorage.setItem("eventer_stack", JSON.stringify(next));
+      localStorage.setItem("eventr_stack", JSON.stringify(next));
     } catch {}
   }
 
@@ -212,7 +212,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
     setBookmarks((prev) => {
       const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
       try {
-        localStorage.setItem("eventer_bookmarks", JSON.stringify(next));
+        localStorage.setItem("eventr_bookmarks", JSON.stringify(next));
       } catch {}
       return next;
     });
@@ -488,7 +488,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
 
             <div className="p-6 sm:col-span-2 sm:p-10">
               <p className="max-w-[52ch] font-heading text-3xl leading-tight tracking-[-0.02em] sm:text-4xl text-foreground">
-                HackScout turns those scattered posts into one city-by-city, deadline-first index.
+                Eventr turns those scattered posts into one city-by-city, deadline-first index.
               </p>
             </div>
           </div>

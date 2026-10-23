@@ -1,4 +1,4 @@
-# BACKLOG.md — Eventer Feature Implementation Backlog
+# BACKLOG.md — Eventr Feature Implementation Backlog
 
 This backlog contains 10 atomic, ordered, self-contained tasks designed to be handed to the DevMarketplace coding agent one at a time. Each task is formulated as a ready-to-paste prompt of 2 to 4 sentences.
 

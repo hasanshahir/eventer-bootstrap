@@ -951,10 +951,10 @@ export async function syncDiscoveredEventsToPrisma(events: DiscoveredEvent[]) {
   try {
     const organizer = await (prisma as any).organizer.upsert({
       where: { id: "org_radar_scanner" },
-      update: { name: "HackScout Autonomous Radar" },
+      update: { name: "Eventr Autonomous Radar" },
       create: {
         id: "org_radar_scanner",
-        name: "HackScout Autonomous Radar",
+        name: "Eventr Autonomous Radar",
       },
     });
 

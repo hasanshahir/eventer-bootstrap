@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     const res = NextResponse.json({ success: true, user: sessionPayload });
 
     // Set secure authentication cookie
-    res.cookies.set("eventer_auth", JSON.stringify(sessionPayload), {
+    res.cookies.set("eventr_auth", JSON.stringify(sessionPayload), {
       path: "/",
       maxAge: 60 * 60 * 24 * 30, // 30 days
       sameSite: "lax",

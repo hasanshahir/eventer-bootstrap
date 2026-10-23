@@ -13,8 +13,8 @@ const EVENTS = [
 
 export async function GET() {
   try {
-    let org = await db.organizer.findFirst({ where: { name: "Eventer Community" } });
-    if (!org) org = await db.organizer.create({ data: { name: "Eventer Community" } });
+    let org = await db.organizer.findFirst({ where: { name: "Eventr Community" } });
+    if (!org) org = await db.organizer.create({ data: { name: "Eventr Community" } });
     let created = 0;
     for (const e of EVENTS) {
       const exists = await db.event.findFirst({ where: { title: e.title } });

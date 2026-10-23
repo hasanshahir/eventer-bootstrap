@@ -13,7 +13,7 @@ export default function Navbar() {
   useEffect(() => {
     // 1. Instant check from localStorage (never fails, zero network latency)
     try {
-      const saved = localStorage.getItem("eventer_user");
+      const saved = localStorage.getItem("eventr_user") || localStorage.getItem("eventer_user");
       if (saved) {
         setUser(JSON.parse(saved));
       }
@@ -27,7 +27,7 @@ export default function Navbar() {
         if (data?.user) {
           setUser(data.user);
           try {
-            localStorage.setItem("eventer_user", JSON.stringify(data.user));
+            localStorage.setItem("eventr_user", JSON.stringify(data.user));
           } catch {}
         }
       })
@@ -36,6 +36,7 @@ export default function Navbar() {
 
   function handleSignOut() {
     try {
+      localStorage.removeItem("eventr_user");
       localStorage.removeItem("eventer_user");
     } catch {}
     setUser(null);
@@ -54,11 +55,11 @@ export default function Navbar() {
           href="/"
         >
           <span className="grid size-8 shrink-0 place-items-center border border-foreground bg-primary font-mono text-[10px] font-bold text-white transition-transform group-hover:-rotate-3 shadow-[2px_2px_0px_0px_currentColor]">
-            HS
+            EV
           </span>
           <span className="min-w-0">
             <span className="block truncate font-heading text-2xl font-bold leading-none tracking-[-0.03em] text-foreground group-hover:text-primary transition-colors">
-              HackScout
+              Eventr
             </span>
             <span className="mt-1 hidden font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground md:block">
               Pakistan event intelligence

@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
 
     // Set cookie and redirect back to app
     const res = NextResponse.redirect(`${proto}://${host}/?auth=success`);
-    res.cookies.set("eventer_auth", JSON.stringify(sessionPayload), {
+    res.cookies.set("eventr_auth", JSON.stringify(sessionPayload), {
       path: "/",
       maxAge: 60 * 60 * 24 * 30, // 30 days
       sameSite: "lax",
