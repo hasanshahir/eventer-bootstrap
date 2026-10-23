@@ -78,7 +78,7 @@ export default function ScanPage() {
             <span className="text-zinc-500 font-mono">Camera: WebRTC Stream</span>
           </div>
 
-          <h1 className="mt-8 font-serif text-5xl sm:text-7xl font-bold tracking-tight text-white">
+          <h1 className="mt-8 text-4xl sm:text-6xl font-extrabold tracking-tight text-white">
             Gate Scanner Desk.
           </h1>
           <p className="mt-4 max-w-[60ch] border-l-4 border-emerald-500 pl-4 text-sm sm:text-base font-medium leading-relaxed text-zinc-300">
@@ -90,13 +90,13 @@ export default function ScanPage() {
       <main className="mx-auto w-full max-w-[1200px] px-4 py-12 sm:px-8 lg:px-12 flex-1 grid gap-8 lg:grid-cols-[1.2fr_.8fr]">
         {/* Left Column: QR Scanner & Manual Verification */}
         <div className="space-y-6">
-          <div className="border border-zinc-800 bg-zinc-900/70 p-6 space-y-4">
-            <h2 className="font-serif text-2xl font-bold text-white">Camera Viewfinder</h2>
-            <div id="reader" className="overflow-hidden border border-zinc-800 rounded bg-zinc-950" />
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6 space-y-4">
+            <h2 className="text-xl sm:text-2xl font-bold text-white">Camera Viewfinder</h2>
+            <div id="reader" className="overflow-hidden border border-zinc-800 rounded-xl bg-zinc-950" />
           </div>
 
           {/* Manual Input Fallback */}
-          <div className="border border-zinc-800 bg-zinc-900/70 p-6 space-y-3">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6 space-y-3">
             <h3 className="font-mono text-xs uppercase tracking-[0.16em] text-zinc-400 font-semibold">
               Manual Ticket Token Override
             </h3>
@@ -105,12 +105,12 @@ export default function ScanPage() {
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 placeholder="Paste ticket token..."
-                className="flex-1 bg-zinc-950 border border-zinc-800 px-4 py-2.5 text-sm text-zinc-100 font-mono outline-none focus:border-emerald-500"
+                className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-zinc-100 font-mono outline-none focus:border-emerald-500"
               />
               <button
                 onClick={() => verify(token)}
                 disabled={busy || !token.trim()}
-                className="border border-zinc-700 bg-emerald-500 text-black font-semibold font-mono text-xs uppercase px-5 py-2.5 hover:bg-emerald-400 disabled:opacity-50"
+                className="rounded-xl border border-zinc-700 bg-emerald-500 text-black font-semibold font-mono text-xs uppercase px-5 py-2.5 hover:bg-emerald-400 disabled:opacity-50"
               >
                 {busy ? "Checking…" : "Verify"}
               </button>
@@ -122,11 +122,11 @@ export default function ScanPage() {
         <div className="space-y-6">
           {/* Result Alert Banner */}
           {result?.ok && (
-            <div className="border border-emerald-500/50 bg-emerald-500/10 p-6 space-y-2">
+            <div className="rounded-2xl border border-emerald-500/50 bg-emerald-500/10 p-6 space-y-2">
               <span className="font-mono text-[10px] uppercase font-bold text-emerald-400 tracking-wider">
                 ✓ CHECK-IN CONFIRMED
               </span>
-              <h3 className="font-serif text-3xl font-bold text-white">
+              <h3 className="text-2xl sm:text-3xl font-bold text-white">
                 {result.attendee?.fullName || "Attendee"}
               </h3>
               <p className="font-mono text-xs text-zinc-300">
@@ -139,11 +139,11 @@ export default function ScanPage() {
           )}
 
           {err && (
-            <div className="border border-red-500/50 bg-red-500/10 p-6 space-y-2">
+            <div className="rounded-2xl border border-red-500/50 bg-red-500/10 p-6 space-y-2">
               <span className="font-mono text-[10px] uppercase font-bold text-red-400 tracking-wider">
                 ✕ SCAN REJECTED
               </span>
-              <p className="font-serif text-xl font-bold text-white">{err}</p>
+              <p className="text-lg font-bold text-white">{err}</p>
               {result?.alreadyCheckedIn && (
                 <p className="font-mono text-xs text-zinc-400">
                   Attendee: {result.attendee?.fullName} ({result.attendee?.email})
@@ -153,7 +153,7 @@ export default function ScanPage() {
           )}
 
           {/* History Ledger */}
-          <div className="border border-zinc-800 bg-zinc-900/70 p-6">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
               <span className="font-mono text-xs uppercase font-semibold tracking-[0.16em] text-zinc-400">
                 Live Attendance Ledger

@@ -49,7 +49,7 @@ export default function PassportPage() {
             <span className="text-zinc-500 font-mono">Status: Authenticated</span>
           </div>
 
-          <h1 className="mt-8 font-serif text-5xl sm:text-7xl font-bold tracking-tight text-white">
+          <h1 className="mt-8 text-4xl sm:text-6xl font-extrabold tracking-tight text-white">
             Your Active Passes.
           </h1>
           <p className="mt-4 max-w-[60ch] border-l-4 border-emerald-500 pl-4 text-sm sm:text-base font-medium leading-relaxed text-zinc-300">
@@ -57,13 +57,13 @@ export default function PassportPage() {
           </p>
 
           {/* Attendee Identity Dossier */}
-          <div className="mt-8 border border-zinc-800 bg-zinc-900/70 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div className="mt-8 rounded-xl border border-zinc-800 bg-zinc-900/70 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
             <div className="flex items-center gap-5">
-              <div className="size-16 border-2 border-emerald-500 bg-zinc-950 grid place-items-center font-mono text-2xl font-bold text-emerald-400 shadow-[0_0_15px_-3px_rgba(16,185,129,0.5)]">
+              <div className="size-16 rounded-xl border-2 border-emerald-500 bg-zinc-950 grid place-items-center font-mono text-2xl font-bold text-emerald-400 shadow-[0_0_15px_-3px_rgba(16,185,129,0.5)]">
                 {initials}
               </div>
               <div>
-                <h2 className="font-serif text-2xl font-bold text-white">{user.name}</h2>
+                <h2 className="text-2xl font-bold text-white">{user.name}</h2>
                 <p className="font-mono text-xs text-zinc-400 mt-1">
                   {user.university} &bull; {user.city}
                 </p>
@@ -94,14 +94,14 @@ export default function PassportPage() {
         )}
 
         {!loading && regs.length === 0 && (
-          <div className="border border-zinc-800 bg-zinc-900/40 p-16 text-center space-y-4">
-            <p className="font-serif text-3xl text-zinc-300">No active event tickets found.</p>
+          <div className="border border-zinc-800 bg-zinc-900/40 p-16 text-center space-y-4 rounded-2xl">
+            <p className="text-2xl sm:text-3xl font-bold text-zinc-200">No active event tickets found.</p>
             <p className="font-mono text-xs text-zinc-500 max-w-[45ch] mx-auto">
               You haven&apos;t RSVP&apos;d to any tech events yet. Explore the live radar and secure your pass in 1 tap.
             </p>
             <Link
               href="/"
-              className="inline-flex items-center gap-2 border border-zinc-700 bg-emerald-500 px-6 py-3 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-black hover:bg-emerald-400 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 bg-emerald-500 px-6 py-3 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-black hover:bg-emerald-400 transition-colors"
             >
               Open Radar &rarr;
             </Link>
@@ -116,7 +116,7 @@ export default function PassportPage() {
             return (
               <div
                 key={r.id}
-                className="border border-zinc-800 bg-zinc-900/60 flex flex-col md:flex-row justify-between hover:border-emerald-500/50 transition-all shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)]"
+                className="rounded-2xl border border-zinc-800 bg-zinc-900/60 flex flex-col md:flex-row justify-between hover:border-emerald-500/50 transition-all shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)] overflow-hidden"
               >
                 {/* Left Ticket Details */}
                 <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between">
@@ -130,7 +130,7 @@ export default function PassportPage() {
                       </span>
                     </div>
 
-                    <h2 className="font-serif text-3xl font-bold text-white tracking-tight">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
                       {ev.title}
                     </h2>
 

@@ -87,7 +87,7 @@ export default function NewEventPage() {
             <span className="text-zinc-500 font-mono">Engine: Google Gemini Flash</span>
           </div>
 
-          <h1 className="mt-8 font-serif text-5xl sm:text-7xl font-bold tracking-tight text-white">
+          <h1 className="mt-8 text-4xl sm:text-6xl font-extrabold tracking-tight text-white">
             Submit an Event.
           </h1>
           <p className="mt-4 max-w-[60ch] border-l-4 border-emerald-500 pl-4 text-sm sm:text-base font-medium leading-relaxed text-zinc-300">
@@ -103,7 +103,7 @@ export default function NewEventPage() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`font-mono text-xs font-semibold uppercase tracking-[0.14em] px-4 py-2.5 border transition-colors ${
+              className={`font-mono text-xs font-semibold uppercase tracking-[0.14em] px-4 py-2.5 rounded-lg border transition-colors ${
                 tab === t
                   ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/50"
                   : "border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:text-white"
@@ -115,21 +115,21 @@ export default function NewEventPage() {
         </div>
 
         {/* Input Zone */}
-        <div className="border border-zinc-800 bg-zinc-900/70 p-6 sm:p-8 space-y-5">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6 sm:p-8 space-y-5">
           {tab === "text" ? (
             <textarea
-              className={inp + " h-48 leading-relaxed"}
+              className={inp + " h-48 leading-relaxed rounded-xl"}
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder={`*FAST AI Summit 2026* 🚀\nSalam everyone! Join us 21 Nov 2026, 10am at FAST-NUCES Islamabad campus.\nTracks: Generative AI, Robotics, Next.js, and Agentic Workflows.\nRegistration: https://fast.edu.pk/summit`}
             />
           ) : (
-            <div className="border-2 border-dashed border-zinc-800 p-8 text-center bg-zinc-950">
+            <div className="border-2 border-dashed border-zinc-800 rounded-xl p-8 text-center bg-zinc-950">
               <input
                 type="file"
                 accept="image/*"
                 onChange={(e) => onFile(e.target.files?.[0])}
-                className="font-mono text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:border file:border-zinc-700 file:bg-zinc-800 file:text-zinc-200 file:font-mono file:text-xs hover:file:bg-zinc-700"
+                className="font-mono text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:border file:border-zinc-700 file:rounded-lg file:bg-zinc-800 file:text-zinc-200 file:font-mono file:text-xs hover:file:bg-zinc-700"
               />
               <p className="mt-3 font-mono text-[10px] text-zinc-500">
                 Supports PNG, JPG, or WEBP up to 4MB.
@@ -140,7 +140,7 @@ export default function NewEventPage() {
           <button
             onClick={parse}
             disabled={busy || (tab === "text" ? !text.trim() : !img)}
-            className="inline-flex items-center gap-2 border border-zinc-700 bg-emerald-500 text-black font-semibold font-mono text-xs uppercase tracking-[0.12em] px-6 py-3 hover:bg-emerald-400 hover:shadow-[0_0_20px_-4px_rgba(16,185,129,0.7)] transition-all disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 bg-emerald-500 text-black font-semibold font-mono text-xs uppercase tracking-[0.12em] px-6 py-3 hover:bg-emerald-400 hover:shadow-[0_0_20px_-4px_rgba(16,185,129,0.7)] transition-all disabled:opacity-50"
           >
             {busy ? "Parsing with AI..." : "✨ Parse with Gemini"}
           </button>
@@ -148,9 +148,9 @@ export default function NewEventPage() {
 
         {/* Extracted Form Review */}
         {ev && (
-          <div className="border border-zinc-800 bg-zinc-900/90 p-6 sm:p-8 space-y-5">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-6 sm:p-8 space-y-5">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-              <h2 className="font-serif text-2xl font-bold text-white">Extracted Metadata</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-white">Extracted Metadata</h2>
               <span className="font-mono text-[10px] uppercase px-2.5 py-0.5 rounded border border-cyan-500/40 bg-cyan-500/10 text-cyan-400">
                 Source: {source}
               </span>
