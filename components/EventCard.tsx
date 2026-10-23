@@ -1,19 +1,29 @@
-import type { Event } from '@prisma/client';
-
-const dateFmt = new Intl.DateTimeFormat('en-GB', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Asia/Karachi',
+const dateFmt = new Intl.DateTimeFormat("en-GB", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Asia/Karachi",
 });
 
-function formatRange(start: Date, end: Date): string {
+function formatRange(start: Date | string, end: Date | string): string {
   return `${dateFmt.format(new Date(start))} → ${dateFmt.format(new Date(end))}`;
 }
 
-export function EventCard({ event }: { event: Event }) {
+export type EventCardData = {
+  id: string;
+  title: string;
+  description: string;
+  city: string;
+  venue: string | null;
+  type: string;
+  startTime: Date | string;
+  endTime: Date | string;
+  capacity: number | null;
+};
+
+export function EventCard({ event }: { event: EventCardData }) {
   return (
     <article className="flex flex-col gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-emerald-500/30 transition-colors">
       <div className="flex items-start justify-between gap-3">
@@ -42,7 +52,7 @@ export function EventCard({ event }: { event: Event }) {
         </div>
         <div className="flex gap-2">
           <dt className="font-mono text-zinc-600 w-14 shrink-0">Seats</dt>
-          <dd className="text-zinc-300">{event.capacity ?? 'Open'}</dd>
+          <dd className="text-zinc-300">{event.capacity ?? "Open"}</dd>
         </div>
       </dl>
     </article>

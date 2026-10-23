@@ -66,22 +66,22 @@ export default function ScanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-black">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-zinc-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white dark:selection:bg-blue-500 dark:selection:text-black transition-colors">
       {/* Editorial Header */}
-      <header className="border-b-2 border-zinc-800 bg-zinc-950 px-4 py-12 sm:px-8 lg:px-12">
+      <header className="border-b-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#030712] px-4 py-12 sm:px-8 lg:px-12 transition-colors">
         <div className="mx-auto max-w-[1200px]">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-y border-zinc-800 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.18em]">
-            <span className="flex items-center gap-2 text-emerald-400">
-              <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="flex flex-wrap items-center justify-between gap-3 border-y border-slate-200 dark:border-zinc-800 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.18em]">
+            <span className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+              <span className="size-2 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse" />
               Organizer Check-In Operations &bull; Live Gate Scanner
             </span>
-            <span className="text-zinc-500 font-mono">Camera: WebRTC Stream</span>
+            <span className="text-slate-500 dark:text-zinc-500 font-mono">Camera: WebRTC Stream</span>
           </div>
 
           <h1 className="mt-8 text-4xl sm:text-6xl font-extrabold tracking-tight text-white">
             Gate Scanner Desk.
           </h1>
-          <p className="mt-4 max-w-[60ch] border-l-4 border-emerald-500 pl-4 text-sm sm:text-base font-medium leading-relaxed text-zinc-300">
+          <p className="mt-4 max-w-[60ch] border-l-4 border-blue-600 dark:border-blue-500 pl-4 text-sm sm:text-base font-medium leading-relaxed text-slate-600 dark:text-zinc-300">
             Scan attendee QR passes or verify cryptographic ticket tokens. Confirms registration status and timestamps check-in instantly in PostgreSQL.
           </p>
         </div>
@@ -129,10 +129,10 @@ export default function ScanPage() {
               <h3 className="text-2xl sm:text-3xl font-bold text-white">
                 {result.attendee?.fullName || "Attendee"}
               </h3>
-              <p className="font-mono text-xs text-zinc-300">
+              <p className="font-mono text-xs text-slate-600 dark:text-zinc-300">
                 {result.attendee?.university || "University Student"} &bull; {result.attendee?.email}
               </p>
-              <p className="font-mono text-[11px] text-emerald-400 pt-2 border-t border-emerald-500/20">
+              <p className="font-mono text-[11px] text-blue-700 dark:text-blue-400 pt-2 border-t border-blue-500/20 font-semibold">
                 Event: {result.event?.title}
               </p>
             </div>
@@ -145,7 +145,7 @@ export default function ScanPage() {
               </span>
               <p className="text-lg font-bold text-white">{err}</p>
               {result?.alreadyCheckedIn && (
-                <p className="font-mono text-xs text-zinc-400">
+                <p className="font-mono text-xs text-slate-600 dark:text-zinc-400">
                   Attendee: {result.attendee?.fullName} ({result.attendee?.email})
                 </p>
               )}
@@ -158,24 +158,24 @@ export default function ScanPage() {
               <span className="font-mono text-xs uppercase font-semibold tracking-[0.16em] text-zinc-400">
                 Live Attendance Ledger
               </span>
-              <span className="font-mono text-xs text-emerald-400">
+              <span className="font-mono text-xs text-blue-600 dark:text-blue-400 font-bold">
                 {history.length} Checked In
               </span>
             </div>
 
             {history.length === 0 ? (
-              <p className="font-mono text-xs text-zinc-500 py-6 text-center">
+              <p className="font-mono text-xs text-slate-500 dark:text-zinc-500 py-6 text-center">
                 Ready to scan passes.
               </p>
             ) : (
-              <div className="divide-y divide-zinc-800 font-mono text-xs">
+              <div className="divide-y divide-slate-200 dark:divide-zinc-800 font-mono text-xs">
                 {history.map((h, i) => (
                   <div key={i} className="py-3 flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-zinc-200">{h.attendee?.fullName}</p>
-                      <p className="text-[10px] text-zinc-500">{h.attendee?.university}</p>
+                      <p className="font-semibold text-slate-800 dark:text-zinc-200">{h.attendee?.fullName}</p>
+                      <p className="text-[10px] text-slate-500 dark:text-zinc-500">{h.attendee?.university}</p>
                     </div>
-                    <span className="text-[10px] text-emerald-400">✓ In Gate</span>
+                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">✓ In Gate</span>
                   </div>
                 ))}
               </div>
