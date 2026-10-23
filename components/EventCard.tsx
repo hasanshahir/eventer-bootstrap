@@ -24,13 +24,36 @@ export type EventCardData = {
 };
 
 export function EventCard({ event }: { event: EventCardData }) {
+  const isPast =
+    (event.startTime && new Date(event.startTime).getTime() <= Date.now()) ||
+    (event.endTime && new Date(event.endTime).getTime() <= Date.now());
+
   return (
-    <article className="flex flex-col gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-emerald-500/30 transition-colors">
+    <article
+      className={`flex flex-col gap-3 rounded-xl p-5 transition-all ${
+        isPast
+          ? "bg-zinc-950/60 border border-zinc-850 opacity-60 grayscale-[60%] hover:opacity-95 hover:grayscale-0"
+          : "bg-zinc-900 border border-zinc-800 hover:border-emerald-500/30"
+      }`}
+    >
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-base font-semibold text-zinc-100 leading-snug">{event.title}</h2>
-        <span className="shrink-0 px-2 py-0.5 text-xs font-mono rounded-md border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
-          {event.type}
-        </span>
+        <h2 className={`text-base font-semibold leading-snug ${isPast ? "text-zinc-400" : "text-zinc-100"}`}>
+          {event.title}
+        </h2>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {isPast ? (
+            <span className="px-2 py-0.5 text-xs font-mono rounded-md border border-zinc-700 bg-zinc-800 text-zinc-400">
+              Closed
+            </span>
+          ) : (
+            <span className="px-2 py-0.5 text-xs font-mono rounded-md border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+              Open RSVP
+            </span>
+          )}
+          <span className="px-2 py-0.5 text-xs font-mono rounded-md border border-zinc-700/50 bg-zinc-800/40 text-zinc-400">
+            {event.type}
+          </span>
+        </div>
       </div>
 
       <p className="text-sm text-zinc-400 line-clamp-3">{event.description}</p>

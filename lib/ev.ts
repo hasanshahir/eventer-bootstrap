@@ -86,6 +86,9 @@ export function toCard(e: any): EventCard {
     .replace(/(?:\n\nOfficial Registration:.*$)/i, "")
     .replace(/(?:Official Registration:.*$)/i, "")
     .trim();
+  const startsAt = start ? new Date(start).toISOString() : null;
+  const endsAt = end ? new Date(end).toISOString() : null;
+  const isClosed = isRegistrationClosed({ startsAt, endsAt });
 
   return {
     id: String(e.id),
@@ -95,14 +98,32 @@ export function toCard(e: any): EventCard {
     venue: e.venue ?? (isGlobal ? "Online (Virtual)" : `${city}, Pakistan`),
     description: cleanDescription || `${title} in ${city}. Register directly with the host.`,
     type: String(e.type ?? e.category ?? "HACKATHON"),
-    startsAt: start ? new Date(start).toISOString() : null,
-    endsAt: end ? new Date(end).toISOString() : null,
+    startsAt,
+    endsAt,
     tags: Array.isArray(e.tags) && e.tags.length > 0 ? e.tags : deriveTags(title, rawDesc),
-    status: "OPEN",
+    status: isClosed ? "CLOSED" : "OPEN",
     url,
     source,
     scope,
   };
+}
+
+export function isRegistrationClosed(e: { startsAt?: string | null; endsAt?: string | null }): boolean {
+  if (!e.startsAt && !e.endsAt) return false;
+  const now = Date.now();
+  if (e.startsAt) {
+    const startTime = new Date(e.startsAt).getTime();
+    if (!isNaN(startTime) && startTime <= now) {
+      return true;
+    }
+  }
+  if (e.endsAt) {
+    const endTime = new Date(e.endsAt).getTime();
+    if (!isNaN(endTime) && endTime <= now) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function fmtDate(iso: string | null) {

@@ -7,7 +7,7 @@ import MatchBadge from "./MatchBadge";
 import RsvpButton from "./RsvpButton";
 import { STACK_OPTIONS } from "@/lib/match";
 import { demoUser } from "@/lib/demoUser";
-import { fmtDate, type EventCard } from "@/lib/ev";
+import { fmtDate, isRegistrationClosed, type EventCard } from "@/lib/ev";
 
 const CITY_DOSSIERS: Record<string, { latLng: string; subtitle: string; tags: string[]; desc: string }> = {
   Karachi: {
@@ -288,48 +288,67 @@ export default function Feed({ events }: { events: EventCard[] }) {
     (e) => e.scope === "global" || e.city.toLowerCase().includes("global") || e.city.toLowerCase().includes("virtual") || e.city.toLowerCase().includes("online")
   ).length;
 
-  const shown = useMemo(
-    () =>
-      feedEvents.filter((e) => {
-        const isGlobal =
-          e.scope === "global" ||
-          e.city.toLowerCase().includes("global") ||
-          e.city.toLowerCase().includes("virtual") ||
-          e.city.toLowerCase().includes("online");
+  const shown = useMemo(() => {
+    const filtered = feedEvents.filter((e) => {
+      const isGlobal =
+        e.scope === "global" ||
+        e.city.toLowerCase().includes("global") ||
+        e.city.toLowerCase().includes("virtual") ||
+        e.city.toLowerCase().includes("online");
 
-        // 1. Scope Filter
-        if (scope === "PAKISTAN" && isGlobal) return false;
-        if (scope === "GLOBAL" && !isGlobal) return false;
+      // 1. Scope Filter
+      if (scope === "PAKISTAN" && isGlobal) return false;
+      if (scope === "GLOBAL" && !isGlobal) return false;
 
-        // 2. City Filter (Strict isolation: local cities only match local events)
-        let matchesCity = city === "All";
-        if (!matchesCity) {
-          if (city.toLowerCase() === "online") {
-            matchesCity = isGlobal;
-          } else {
-            matchesCity = !isGlobal && e.city.toLowerCase() === city.toLowerCase();
-          }
+      // 2. City Filter (Strict isolation: local cities only match local events)
+      let matchesCity = city === "All";
+      if (!matchesCity) {
+        if (city.toLowerCase() === "online") {
+          matchesCity = isGlobal;
+        } else {
+          matchesCity = !isGlobal && e.city.toLowerCase() === city.toLowerCase();
         }
-        if (!matchesCity) return false;
+      }
+      if (!matchesCity) return false;
 
-        // 3. Format / Type Filter
-        const matchesType = type === "All" || e.type.toUpperCase() === type.toUpperCase();
-        if (!matchesType) return false;
+      // 3. Format / Type Filter
+      const matchesType = type === "All" || e.type.toUpperCase() === type.toUpperCase();
+      if (!matchesType) return false;
 
-        // 4. Saved Bookmarks
-        const matchesSaved = !showSavedOnly || bookmarks.includes(e.id);
-        if (!matchesSaved) return false;
+      // 4. Saved Bookmarks
+      const matchesSaved = !showSavedOnly || bookmarks.includes(e.id);
+      if (!matchesSaved) return false;
 
-        // 5. Search Query
-        const matchesQ =
-          !q ||
-          (e.title + " " + e.organizer + " " + e.city + " " + e.description + " " + e.tags.join(" "))
-            .toLowerCase()
-            .includes(q.toLowerCase());
-        return matchesQ;
-      }),
-    [feedEvents, scope, city, type, q, showSavedOnly, bookmarks]
-  );
+      // 5. Search Query
+      const matchesQ =
+        !q ||
+        (e.title + " " + e.organizer + " " + e.city + " " + e.description + " " + e.tags.join(" "))
+          .toLowerCase()
+          .includes(q.toLowerCase());
+      return matchesQ;
+    });
+
+    // CRITICAL SORT: Events accepting registration (open) are SHOWN FIRST in whatever filter is applied.
+    // Events whose deadline has passed (closed) are placed after open events.
+    return filtered.sort((a, b) => {
+      const aClosed = isRegistrationClosed(a);
+      const bClosed = isRegistrationClosed(b);
+
+      if (!aClosed && bClosed) return -1; // a is open, b is closed -> a comes first
+      if (aClosed && !bClosed) return 1;  // a is closed, b is open -> b comes first
+
+      const aTime = a.startsAt ? new Date(a.startsAt).getTime() : Infinity;
+      const bTime = b.startsAt ? new Date(b.startsAt).getTime() : Infinity;
+
+      if (!aClosed && !bClosed) {
+        // Both open: sort chronologically by upcoming date/deadline (closest first)
+        return aTime - bTime;
+      } else {
+        // Both closed: sort reverse chronologically (most recently concluded first)
+        return bTime - aTime;
+      }
+    });
+  }, [feedEvents, scope, city, type, q, showSavedOnly, bookmarks]);
 
   const activeDossier = CITY_DOSSIERS[selectedCityDesk] || CITY_DOSSIERS["Karachi"];
   const activeCityCount = feedEvents.filter((e) => {
@@ -362,7 +381,10 @@ export default function Feed({ events }: { events: EventCard[] }) {
                   Live Pakistan event radar
                 </span>
                 <span className="font-mono text-muted-foreground">
-                  {events.length} open registrations &bull; Nationwide circuit
+                  <strong className="text-primary font-bold">
+                    {feedEvents.filter((e) => !isRegistrationClosed(e)).length}
+                  </strong>{" "}
+                  open registrations &bull; {feedEvents.filter((e) => isRegistrationClosed(e)).length} archived &bull; Nationwide circuit
                 </span>
               </div>
 
@@ -878,19 +900,40 @@ export default function Feed({ events }: { events: EventCard[] }) {
               e.city.toLowerCase().includes("virtual") ||
               e.city.toLowerCase().includes("online");
 
+            const isClosed = isRegistrationClosed(e);
+
             return (
               <article
                 key={e.id}
                 id={`event-${e.id}`}
-                className="group min-h-[22rem] border border-foreground/30 bg-card transition-all flex flex-col justify-between p-6 sm:p-7 hover:border-primary hover:bg-background shadow-[2px_2px_0px_0px_currentColor]"
+                className={`group min-h-[22rem] border transition-all flex flex-col justify-between p-6 sm:p-7 ${
+                  isClosed
+                    ? "border-zinc-800 bg-zinc-950/60 opacity-60 grayscale-[60%] hover:opacity-95 hover:grayscale-0 hover:border-zinc-700 shadow-none text-zinc-400"
+                    : "border-foreground/30 bg-card hover:border-primary hover:bg-background shadow-[2px_2px_0px_0px_currentColor]"
+                }`}
               >
                 <div>
                   {/* Top card row */}
                   <div className="flex items-center justify-between border-b border-foreground/20 pb-3 mb-4">
-                    <span className="font-heading text-4xl italic text-muted-foreground group-hover:text-primary transition-colors">
+                    <span
+                      className={`font-heading text-4xl italic transition-colors ${
+                        isClosed ? "text-zinc-600" : "text-muted-foreground group-hover:text-primary"
+                      }`}
+                    >
                       {padIndex}
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                      {isClosed ? (
+                        <span className="font-mono text-[10px] font-bold uppercase px-2 py-0.5 border border-zinc-700 bg-zinc-800/90 text-zinc-400 flex items-center gap-1">
+                          <span className="inline-block size-1.5 rounded-full bg-zinc-500" />
+                          Registration Closed
+                        </span>
+                      ) : (
+                        <span className="font-mono text-[10px] font-bold uppercase px-2 py-0.5 border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 flex items-center gap-1">
+                          <span className="inline-block size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          Open RSVP
+                        </span>
+                      )}
                       <span className="font-mono text-[10px] font-semibold uppercase px-2 py-0.5 border border-foreground/40 bg-background text-foreground">
                         {e.type}
                       </span>
@@ -907,7 +950,11 @@ export default function Feed({ events }: { events: EventCard[] }) {
                   </div>
 
                   {/* Title & Organization */}
-                  <h3 className="font-heading text-3xl font-bold leading-tight tracking-tight text-foreground group-hover:text-primary transition-colors">
+                  <h3
+                    className={`font-heading text-3xl font-bold leading-tight tracking-tight transition-colors ${
+                      isClosed ? "text-zinc-400" : "text-foreground group-hover:text-primary"
+                    }`}
+                  >
                     {e.title}
                   </h3>
 
@@ -922,9 +969,21 @@ export default function Feed({ events }: { events: EventCard[] }) {
                     {e.description}
                   </p>
 
-                  <p className="mt-3 font-mono text-[11px] text-foreground/70">
-                    Starts: {fmtDate(e.startsAt)}
-                  </p>
+                  {isClosed ? (
+                    <p className="mt-3 font-mono text-[11px] text-zinc-500 flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-semibold text-[9px] uppercase border border-zinc-700">
+                        Deadline Passed
+                      </span>
+                      <span>Ended: {fmtDate(e.endsAt || e.startsAt)}</span>
+                    </p>
+                  ) : (
+                    <p className="mt-3 font-mono text-[11px] text-emerald-400/90 font-medium flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-semibold text-[9px] uppercase border border-emerald-500/30">
+                        Open
+                      </span>
+                      <span>Starts: {fmtDate(e.startsAt)}</span>
+                    </p>
+                  )}
 
                   {/* Tags & Match Score */}
                   <div className="mt-4 flex flex-wrap gap-1.5 items-center">
@@ -939,24 +998,42 @@ export default function Feed({ events }: { events: EventCard[] }) {
 
                 {/* Bottom Card Footer: External Host Link & Calendar Sync */}
                 <div className="mt-6 border-t border-foreground/20 pt-4 flex items-center justify-between gap-3">
-                  <a
-                    href={e.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 h-10 border border-foreground bg-primary px-4 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-white hover:bg-blue-600 transition-all shadow-[2px_2px_0px_0px_currentColor] active:translate-x-0.5 active:translate-y-0.5"
-                  >
-                    <span>Register on Host</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 256 256" className="size-3.5">
-                      <path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z" />
-                    </svg>
-                  </a>
+                  {isClosed ? (
+                    <a
+                      href={e.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 h-10 border border-zinc-700 bg-zinc-800/80 px-4 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-all cursor-pointer"
+                      title="Registration has closed for this event. View past details or host archive."
+                    >
+                      <span className="text-zinc-500 line-through">Register</span>
+                      <span>Closed / Archive</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 256 256" className="size-3.5 opacity-60">
+                        <path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z" />
+                      </svg>
+                    </a>
+                  ) : (
+                    <a
+                      href={e.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 h-10 border border-foreground bg-primary px-4 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-white hover:bg-blue-600 transition-all shadow-[2px_2px_0px_0px_currentColor] active:translate-x-0.5 active:translate-y-0.5"
+                    >
+                      <span>Register on Host</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 256 256" className="size-3.5">
+                        <path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z" />
+                      </svg>
+                    </a>
+                  )}
 
                   <div className="flex items-center gap-3">
                     <a
                       href={buildGoogleCalendarUrl(e)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-mono text-[11px] text-foreground hover:text-primary uppercase tracking-[0.1em] transition-colors"
+                      className={`font-mono text-[11px] uppercase tracking-[0.1em] transition-colors ${
+                        isClosed ? "text-zinc-500 hover:text-zinc-300" : "text-foreground hover:text-primary"
+                      }`}
                       title="Add to Google Calendar"
                     >
                       + Calendar
