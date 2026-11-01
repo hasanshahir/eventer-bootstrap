@@ -8,7 +8,7 @@
       ],
       "numberOfRuns": 1,
       "settings": {
-        "preset": "perf"
+        "chromeFlags": "--no-sandbox --headless --disable-gpu"
       }
     },
     "assert": {
@@ -24,4 +24,3 @@
     }
   }
 }
-
