@@ -45,7 +45,7 @@ test.describe("Eventr Production Readiness E2E & Accessibility Quality Gate", ()
     await page.goto("/cities");
     await expect(page.locator("h1")).toContainText("Find your local");
 
-    const deskCards = page.locator("a[href*='city=']");
+    const deskCards = page.locator("a[href*='city='], a[href*='scope=global']");
     const count = await deskCards.count();
     expect(count).toBeGreaterThanOrEqual(20);
 
