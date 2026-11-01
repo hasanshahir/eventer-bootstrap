@@ -1,8 +1,29 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Html5QrcodeScanner } from "html5-qrcode";
+
+interface OrganizerEventSummary {
+  id: string;
+  slug: string;
+  title: string;
+  city: string;
+  startTime: string;
+  status: string;
+  capacity: number | null;
+  confirmedCount: number;
+  checkedInCount: number;
+  waitlistedCount: number;
+  recentCheckIns: Array<{
+    id: string;
+    checkedInAt: string | null;
+    attendee: {
+      name: string | null;
+      university: string | null;
+    };
+  }>;
+}
 
 interface ScanCheckinResult {
   ok?: boolean;
@@ -24,6 +45,8 @@ export default function ScanPage() {
   const [authStatus, setAuthStatus] = useState<
     "checking" | "organizer" | "forbidden" | "unauthenticated"
   >("checking");
+  const [managedEvents, setManagedEvents] = useState<OrganizerEventSummary[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ScanCheckinResult | null>(null);
@@ -31,6 +54,28 @@ export default function ScanPage() {
   const [history, setHistory] = useState<ScanCheckinResult[]>([]);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const busyRef = useRef(false);
+  const selectedEventIdRef = useRef<string>("");
+
+  useEffect(() => {
+    selectedEventIdRef.current = selectedEventId;
+  }, [selectedEventId]);
+
+  const loadOrganizerEvents = useCallback(async () => {
+    try {
+      const res = await fetch("/api/v1/organizer/events");
+      if (res.status === 401) {
+        setAuthStatus("unauthenticated");
+        return;
+      }
+      if (!res.ok) return;
+      const data = (await res.json()) as { events?: OrganizerEventSummary[] };
+      const list = data.events ?? [];
+      setManagedEvents(list);
+      setSelectedEventId((prev) => prev || list[0]?.id || "");
+    } catch {
+      // Keep existing state on transient network failure
+    }
+  }, []);
 
   useEffect(() => {
     fetch("/api/v1/account")
@@ -43,12 +88,60 @@ export default function ScanPage() {
         const role = data.profile?.role;
         if (role === "ORGANIZER" || role === "ADMIN") {
           setAuthStatus("organizer");
+          await loadOrganizerEvents();
         } else {
           setAuthStatus("forbidden");
         }
       })
       .catch(() => setAuthStatus("unauthenticated"));
-  }, []);
+  }, [loadOrganizerEvents]);
+
+  async function verify(t: string) {
+    if (!t || busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    setErr("");
+    setResult(null);
+
+    try {
+      scannerRef.current?.pause(true);
+    } catch {}
+
+    try {
+      const res = await fetch("/api/v1/checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ticketToken: t,
+          eventId: selectedEventIdRef.current || undefined,
+        }),
+      });
+      if (res.status === 401) {
+        setAuthStatus("unauthenticated");
+      }
+      const data = (await res.json()) as ScanCheckinResult;
+      if (res.ok) {
+        setResult(data);
+        setHistory((prev) => [data, ...prev.slice(0, 19)]);
+        await loadOrganizerEvents();
+      } else {
+        setErr(data.error || "Check-in failed");
+        if (data.alreadyCheckedIn) {
+          setResult(data);
+        }
+      }
+    } catch {
+      setErr("Network error during check-in");
+    }
+
+    setTimeout(() => {
+      try {
+        scannerRef.current?.resume();
+      } catch {}
+      busyRef.current = false;
+      setBusy(false);
+    }, 1500);
+  }
 
   useEffect(() => {
     if (authStatus !== "organizer") return;
@@ -78,41 +171,7 @@ export default function ScanPage() {
     };
   }, [authStatus]);
 
-  async function verify(t: string) {
-    if (!t || busyRef.current) return;
-    busyRef.current = true;
-    setBusy(true);
-    setErr("");
-    setResult(null);
-
-    try {
-      const res = await fetch("/api/v1/checkin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticketToken: t }),
-      });
-      if (res.status === 401) {
-        setAuthStatus("unauthenticated");
-      }
-      const data = (await res.json()) as ScanCheckinResult;
-      if (res.ok) {
-        setResult(data);
-        setHistory((prev) => [data, ...prev.slice(0, 19)]);
-      } else {
-        setErr(data.error || "Check-in failed");
-        if (data.alreadyCheckedIn) {
-          setResult(data);
-        }
-      }
-    } catch {
-      setErr("Network error during check-in");
-    }
-
-    setTimeout(() => {
-      busyRef.current = false;
-      setBusy(false);
-    }, 1500);
-  }
+  const activeEvent = managedEvents.find((e) => e.id === selectedEventId) ?? null;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pt-[4.5rem] transition-colors">
@@ -171,6 +230,60 @@ export default function ScanPage() {
           </div>
         )}
 
+        {/* Active Event Selector & Roster Export Bar */}
+        {authStatus === "organizer" && (
+          <section className="border-2 border-foreground bg-card p-6 shadow-[4px_4px_0px_0px_currentColor] space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div className="flex-1 min-w-[240px]">
+                <label
+                  htmlFor="gate-event-select"
+                  className="block font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground font-semibold mb-1.5"
+                >
+                  Active Gate Event (Cross-Checked Against Signed Ticket)
+                </label>
+                <select
+                  id="gate-event-select"
+                  value={selectedEventId}
+                  onChange={(e) => setSelectedEventId(e.target.value)}
+                  className="w-full h-11 bg-background border border-foreground/40 px-4 font-mono text-xs text-foreground outline-none focus:border-primary"
+                >
+                  {managedEvents.length === 0 ? (
+                    <option value="">No managed events found — submit one at /organizer/new</option>
+                  ) : (
+                    managedEvents.map((ev) => (
+                      <option key={ev.id} value={ev.id}>
+                        {ev.title} ({ev.city}) — {ev.checkedInCount}/{ev.confirmedCount} checked in
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              {activeEvent && (
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="border border-foreground/30 bg-background px-4 py-2 font-mono text-xs">
+                    <span className="text-primary font-bold">
+                      {activeEvent.checkedInCount}
+                    </span>{" "}
+                    / {activeEvent.confirmedCount} Checked In &bull;{" "}
+                    <span className="text-amber-500 font-semibold">
+                      {activeEvent.waitlistedCount}
+                    </span>{" "}
+                    Waitlisted
+                  </div>
+                  <a
+                    href={`/api/v1/organizer/events/${encodeURIComponent(activeEvent.id)}/roster.csv`}
+                    download
+                    className="inline-flex items-center gap-2 h-10 border border-foreground bg-background px-4 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-foreground hover:border-primary hover:text-primary transition-colors shadow-[2px_2px_0px_0px_currentColor]"
+                  >
+                    Export Roster CSV &darr;
+                  </a>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
         <div className="grid gap-8 lg:grid-cols-[1.2fr_.8fr]">
           {/* Left Column: QR Scanner & Manual Verification */}
           <div className="space-y-6">
@@ -211,7 +324,7 @@ export default function ScanPage() {
             </div>
           </div>
 
-          {/* Right Column: Scan Result & Live Attendance Ledger */}
+          {/* Right Column: Scan Result & Live Database Attendance Ledger */}
           <div className="space-y-6">
             {result?.ok && (
               <div className="border-2 border-emerald-500 bg-emerald-500/10 p-6 space-y-2">
@@ -247,18 +360,38 @@ export default function ScanPage() {
               </div>
             )}
 
-            {/* History Ledger */}
+            {/* Database + Session Scan Ledger */}
             <div className="border border-foreground/30 bg-card p-6 shadow-[2px_2px_0px_0px_currentColor]">
               <div className="flex items-center justify-between border-b border-foreground/20 pb-3 mb-4">
                 <span className="font-mono text-xs uppercase font-semibold tracking-[0.16em] text-muted-foreground">
-                  Session Scan Ledger
+                  Gate Check-In Ledger
                 </span>
                 <span className="font-mono text-xs text-primary font-bold">
-                  {history.length} Checked In
+                  {activeEvent
+                    ? `${activeEvent.checkedInCount} Total Checked In`
+                    : `${history.length} Checked In`}
                 </span>
               </div>
 
-              {history.length === 0 ? (
+              {activeEvent && activeEvent.recentCheckIns.length > 0 ? (
+                <div className="divide-y divide-foreground/20 font-mono text-xs">
+                  {activeEvent.recentCheckIns.map((c) => (
+                    <div key={c.id} className="py-3 flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-foreground">
+                          {c.attendee.name || "Verified Attendee"}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {c.attendee.university || "Verified Pass"}
+                        </p>
+                      </div>
+                      <span className="text-[10px] text-primary font-bold">
+                        ✓ {c.checkedInAt ? new Date(c.checkedInAt).toLocaleTimeString() : "In Gate"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : history.length === 0 ? (
                 <p className="font-mono text-xs text-muted-foreground py-6 text-center">
                   Ready to scan passes.
                 </p>

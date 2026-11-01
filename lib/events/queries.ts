@@ -112,7 +112,7 @@ async function fetchPublicEventsUncached(): Promise<EventCard[]> {
   return sortEventsDeadlineFirst(cards);
 }
 
-export const getPublicEvents = unstable_cache(
+const getCachedPublicEvents = unstable_cache(
   fetchPublicEventsUncached,
   ["public-events-v2"],
   {
@@ -120,5 +120,13 @@ export const getPublicEvents = unstable_cache(
     revalidate: 300,
   }
 );
+
+export async function getPublicEvents(): Promise<EventCard[]> {
+  try {
+    return await getCachedPublicEvents();
+  } catch {
+    return await fetchPublicEventsUncached();
+  }
+}
 
 export { fetchPublicEventsUncached };

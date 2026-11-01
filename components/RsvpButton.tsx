@@ -5,7 +5,6 @@ import Link from "next/link";
 
 export default function RsvpButton({
   eventId,
-  isAuthenticated = false,
   turnstileToken,
 }: {
   eventId: string;
@@ -54,11 +53,11 @@ export default function RsvpButton({
     }
   }
 
-  if (!isAuthenticated || state === "unauth") {
+  if (state === "unauth") {
     return (
       <Link
-        href="/login"
-        className="inline-flex items-center h-10 border border-foreground bg-primary px-4 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-white hover:bg-blue-600 transition-all shadow-[2px_2px_0px_0px_currentColor]"
+        href="/login?callbackUrl=/"
+        className="inline-flex items-center h-10 border border-foreground bg-primary px-3.5 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-white hover:bg-blue-600 transition-all shadow-[2px_2px_0px_0px_currentColor]"
       >
         Sign in to RSVP &rarr;
       </Link>
@@ -87,13 +86,13 @@ export default function RsvpButton({
         type="button"
         onClick={rsvp}
         disabled={state === "loading"}
-        className="h-10 rounded-none border border-foreground bg-primary px-4 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-white hover:bg-blue-600 transition-all disabled:opacity-50 shadow-[2px_2px_0px_0px_currentColor] active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
+        className="h-10 rounded-none border border-foreground bg-card px-3.5 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-foreground hover:border-primary hover:bg-primary hover:text-white transition-all disabled:opacity-50 shadow-[2px_2px_0px_0px_currentColor] active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
       >
         {state === "loading"
-          ? "Registering…"
+          ? "RSVP’ing…"
           : state === "error"
-          ? "Retry RSVP"
-          : "1-Tap RSVP"}
+            ? "Retry RSVP"
+            : "1-Tap RSVP"}
       </button>
       {errorMsg && (
         <span className="font-mono text-[10px] text-red-500">{errorMsg}</span>

@@ -7,6 +7,7 @@ import { toCard, fmtDate } from "@/lib/ev";
 
 interface RegistrationRow {
   id: string;
+  eventId: string;
   status: string;
   ticketToken: string;
   checkedInAt?: string | null;
@@ -26,12 +27,11 @@ export default function PassportPage() {
   const [regs, setRegs] = useState<RegistrationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [unauthenticated, setUnauthenticated] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/v1/account"),
-      fetch("/api/v1/registrations"),
-    ])
+    Promise.all([fetch("/api/v1/account"), fetch("/api/v1/registrations")])
       .then(async ([accRes, regRes]) => {
         if (accRes.status === 401 || regRes.status === 401) {
           setUnauthenticated(true);
@@ -44,11 +44,43 @@ export default function PassportPage() {
         if (accData?.profile) setUser(accData.profile);
         setRegs(regData.registrations ?? []);
       })
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  const displayName = user?.fullName || user?.email?.split("@")[0] || "Developer";
+  async function handleCancelRsvp(regId: string) {
+    setCancellingId(regId);
+    setFeedback(null);
+    try {
+      const res = await fetch(`/api/v1/registrations/${regId}`, {
+        method: "DELETE",
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        promotedRegistrationId?: string | null;
+      };
+      if (!res.ok || !data.ok) {
+        setFeedback(data.error || "Could not cancel registration.");
+        return;
+      }
+      setRegs((prev) =>
+        prev.map((r) => (r.id === regId ? { ...r, status: "CANCELLED" } : r))
+      );
+      setFeedback(
+        data.promotedRegistrationId
+          ? "RSVP cancelled and the next waitlisted attendee was promoted."
+          : "Your RSVP has been cancelled."
+      );
+    } catch {
+      setFeedback("Network error while cancelling registration.");
+    } finally {
+      setCancellingId(null);
+    }
+  }
+
+  const displayName =
+    user?.fullName || user?.email?.split("@")[0] || "Developer";
   const initials = displayName
     .split(/\s+/)
     .filter(Boolean)
@@ -59,11 +91,13 @@ export default function PassportPage() {
 
   const hash = user?.email
     ? Array.from(user.email)
-      .reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7)
-      .toString(16)
-      .toUpperCase()
-      .slice(0, 6)
+        .reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7)
+        .toString(16)
+        .toUpperCase()
+        .slice(0, 6)
     : "AUTH";
+
+  const activeRegsCount = regs.filter((r) => r.status !== "CANCELLED").length;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pt-[4.5rem] transition-colors">
@@ -84,7 +118,9 @@ export default function PassportPage() {
             Your Active Passes.
           </h1>
           <p className="mt-4 max-w-[60ch] border-l-4 border-primary pl-4 text-sm sm:text-base font-medium leading-relaxed text-muted-foreground">
-            Cryptographically signed HS256 JWT QR tickets issued for Pakistan&apos;s hackathons and developer conferences. Present at the venue gate for organizer check-in.
+            Cryptographically signed HS256 JWT QR tickets issued for
+            Pakistan&apos;s hackathons and developer conferences. Present at the
+            venue gate for organizer check-in.
           </p>
 
           {user && !unauthenticated && (
@@ -112,7 +148,7 @@ export default function PassportPage() {
                   Active Passes
                 </span>
                 <span className="font-heading text-4xl font-bold text-foreground">
-                  {regs.length}
+                  {activeRegsCount}
                 </span>
               </div>
             </div>
@@ -121,7 +157,16 @@ export default function PassportPage() {
       </header>
 
       {/* Main Ticket Passes */}
-      <main className="mx-auto w-full max-w-[1200px] px-4 py-12 sm:px-8 lg:px-12 flex-1">
+      <main className="mx-auto w-full max-w-[1200px] px-4 py-12 sm:px-8 lg:px-12 flex-1 space-y-6">
+        {feedback && (
+          <div
+            role="status"
+            className="border border-primary bg-primary/10 px-4 py-3 font-mono text-xs text-foreground"
+          >
+            {feedback}
+          </div>
+        )}
+
         {loading ? (
           <div className="p-16 border border-foreground/30 text-center font-mono text-sm text-muted-foreground bg-card">
             Verifying passport ledger…
@@ -132,7 +177,9 @@ export default function PassportPage() {
               Sign in to access your DevPassport
             </h2>
             <p className="font-mono text-xs text-muted-foreground max-w-[48ch] mx-auto">
-              Your event passes are bound to your authenticated account session. Sign in with Google or an email magic link to view your QR tickets.
+              Your event passes are bound to your authenticated account session.
+              Sign in with Google or an email magic link to view your QR
+              tickets.
             </p>
             <div className="pt-2">
               <Link
@@ -149,7 +196,8 @@ export default function PassportPage() {
               No active event tickets found.
             </p>
             <p className="font-mono text-xs text-muted-foreground max-w-[45ch] mx-auto">
-              You haven&apos;t RSVP&apos;d to any on-platform tech events yet. Explore the live radar to register.
+              You haven&apos;t RSVP&apos;d to any on-platform tech events yet.
+              Explore the live radar to register.
             </p>
             <Link
               href="/"
@@ -161,13 +209,16 @@ export default function PassportPage() {
         ) : (
           <div className="space-y-8">
             {regs.map((r, i) => {
-              const ev = toCard(r.event ?? {});
+              const ev = toCard(r.event ?? { id: r.eventId });
               const ticketNumber = `TKT-${String(i + 1).padStart(2, "0")}`;
+              const isCancelled = r.status === "CANCELLED";
 
               return (
                 <div
                   key={r.id}
-                  className="border-2 border-foreground bg-card flex flex-col md:flex-row justify-between transition-all shadow-[4px_4px_0px_0px_currentColor] overflow-hidden"
+                  className={`border-2 border-foreground bg-card flex flex-col md:flex-row justify-between transition-all shadow-[4px_4px_0px_0px_currentColor] overflow-hidden ${
+                    isCancelled ? "opacity-60" : ""
+                  }`}
                 >
                   <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between">
                     <div>
@@ -189,7 +240,7 @@ export default function PassportPage() {
                       </p>
 
                       <p className="mt-2 font-mono text-xs text-muted-foreground">
-                        Starts: {fmtDate(ev.startsAt)}
+                        Starts: {fmtDate(ev.startsAt, Boolean(ev.dateOnly))}
                       </p>
 
                       <p className="mt-4 text-xs text-muted-foreground max-w-[65ch] leading-relaxed">
@@ -197,21 +248,48 @@ export default function PassportPage() {
                       </p>
                     </div>
 
-                    <div className="mt-8 pt-4 border-t border-foreground/20 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
+                    <div className="mt-8 pt-4 border-t border-foreground/20 flex flex-wrap items-center justify-between gap-4 font-mono text-[11px] text-muted-foreground">
                       <span>Organizer: {ev.organizer || "Community Host"}</span>
-                      <span>Signed HS256 JWT Pass</span>
+
+                      <div className="flex flex-wrap items-center gap-3">
+                        <a
+                          href={`/api/v1/calendar/event/${encodeURIComponent(
+                            ev.id || r.eventId
+                          )}.ics`}
+                          className="border border-foreground/30 bg-background px-3 py-1.5 text-foreground hover:border-primary"
+                        >
+                          Download .ics
+                        </a>
+                        {(r.status === "CONFIRMED" ||
+                          r.status === "WAITLISTED") && (
+                          <button
+                            type="button"
+                            disabled={cancellingId === r.id}
+                            onClick={() => handleCancelRsvp(r.id)}
+                            className="border border-red-500/50 bg-red-500/10 px-3 py-1.5 text-red-500 hover:bg-red-500/20 disabled:opacity-50 cursor-pointer"
+                          >
+                            {cancellingId === r.id
+                              ? "Cancelling…"
+                              : "Cancel RSVP"}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 
                   <div className="border-t md:border-t-0 md:border-l-2 border-dashed border-foreground/30 p-8 bg-background flex flex-col items-center justify-center min-w-[240px]">
                     <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-3 text-center">
-                      GATE CHECK-IN PASS
+                      {isCancelled ? "PASS CANCELLED" : "GATE CHECK-IN PASS"}
                     </p>
                     <div className="bg-white p-3.5 border border-foreground">
-                      <QRCodeSVG value={r.ticketToken} size={150} level="M" />
+                      <QRCodeSVG
+                        value={isCancelled ? "CANCELLED" : r.ticketToken}
+                        size={150}
+                        level="M"
+                      />
                     </div>
                     <p className="mt-3 font-mono text-[10px] text-muted-foreground text-center break-all max-w-[170px] line-clamp-2">
-                      {r.ticketToken}
+                      {isCancelled ? "Cancelled by attendee" : r.ticketToken}
                     </p>
                   </div>
                 </div>

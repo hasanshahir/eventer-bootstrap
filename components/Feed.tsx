@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import MatchBadge from "./MatchBadge";
+import RsvpButton from "./RsvpButton";
+import { buildGoogleCalendarUrl } from "@/lib/calendar";
 import { STACK_OPTIONS } from "@/lib/match";
 import { fmtDate, isRegistrationClosed, type EventCard } from "@/lib/ev";
 import { CITY_DESK_MAP, findNearestCityDesk } from "@/lib/constants/geo";
@@ -28,24 +30,6 @@ const FEATURED_CITY_SLUGS = [
   "sukkur",
   "online",
 ];
-
-function buildGoogleCalendarUrl(e: EventCard) {
-  const start = e.startsAt
-    ? new Date(e.startsAt).toISOString().replace(/-|:|\.\d\d\d/g, "")
-    : "";
-  const end = e.endsAt
-    ? new Date(e.endsAt).toISOString().replace(/-|:|\.\d\d\d/g, "")
-    : start;
-  const dates = start && end ? `${start}/${end}` : "";
-  const params = new URLSearchParams({
-    action: "TEMPLATE",
-    text: e.title,
-    location: [e.venue, e.city, "Pakistan"].filter(Boolean).join(", "),
-    details: `${e.description}\n\nOfficial Host Registration:\n${e.url}`,
-  });
-  if (dates) params.set("dates", dates);
-  return `https://calendar.google.com/calendar/render?${params.toString()}`;
-}
 
 export default function Feed({ events }: { events: EventCard[] }) {
   const params = useSearchParams();
@@ -1009,7 +993,12 @@ export default function Feed({ events }: { events: EventCard[] }) {
                         : "text-foreground group-hover:text-primary"
                     }`}
                   >
-                    {e.title}
+                    <Link
+                      href={`/events/${encodeURIComponent(e.slug || e.id)}`}
+                      className="hover:underline"
+                    >
+                      {e.title}
+                    </Link>
                   </h3>
 
                   <p className="mt-2 text-xs font-mono text-muted-foreground flex items-center gap-1.5">
@@ -1065,98 +1054,115 @@ export default function Feed({ events }: { events: EventCard[] }) {
                   </div>
                 </div>
 
-                {/* Bottom Card Footer: External Host Link & Calendar Sync */}
-                <div className="mt-6 border-t border-foreground/20 pt-4 flex items-center justify-between gap-3">
-                  {isClosed ? (
-                    <a
-                      href={e.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 h-10 border border-zinc-700 bg-zinc-800/80 px-4 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-all cursor-pointer"
-                      title="Registration has closed for this event. View past details or host archive."
-                    >
-                      <span className="text-zinc-500 line-through">
-                        Register
-                      </span>
-                      <span>Closed / Archive</span>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="1em"
-                        height="1em"
-                        fill="currentColor"
-                        viewBox="0 0 256 256"
-                        className="size-3.5 opacity-60"
+                {/* Bottom Card Footer: 1-Tap RSVP, External Host Link & Calendar Sync */}
+                <div className="mt-6 border-t border-foreground/20 pt-4 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    {isClosed ? (
+                      <a
+                        href={e.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 h-10 border border-zinc-700 bg-zinc-800/80 px-4 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-all cursor-pointer"
+                        title="Registration has closed for this event. View past details or host archive."
                       >
-                        <path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z" />
-                      </svg>
-                    </a>
-                  ) : (
-                    <a
-                      href={e.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 h-10 border border-foreground bg-primary px-4 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-white hover:bg-blue-600 transition-all shadow-[2px_2px_0px_0px_currentColor] active:translate-x-0.5 active:translate-y-0.5"
-                    >
-                      <span>Register on Host</span>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="1em"
-                        height="1em"
-                        fill="currentColor"
-                        viewBox="0 0 256 256"
-                        className="size-3.5"
-                      >
-                        <path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z" />
-                      </svg>
-                    </a>
-                  )}
+                        <span className="text-zinc-500 line-through">
+                          Register
+                        </span>
+                        <span>Closed / Archive</span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="1em"
+                          height="1em"
+                          fill="currentColor"
+                          viewBox="0 0 256 256"
+                          className="size-3.5 opacity-60"
+                        >
+                          <path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z" />
+                        </svg>
+                      </a>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <RsvpButton eventId={e.id} />
+                        <a
+                          href={e.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 h-10 border border-foreground/40 bg-background px-3.5 font-mono text-xs font-semibold uppercase tracking-[0.08em] text-foreground hover:border-primary hover:text-primary transition-all"
+                        >
+                          <span>Host Link</span>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="1em"
+                            height="1em"
+                            fill="currentColor"
+                            viewBox="0 0 256 256"
+                            className="size-3.5"
+                          >
+                            <path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z" />
+                          </svg>
+                        </a>
+                      </div>
+                    )}
 
-                  <div className="flex items-center gap-3">
-                    <a
-                      href={buildGoogleCalendarUrl(e)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`font-mono text-[11px] uppercase tracking-[0.1em] transition-colors ${
-                        isClosed
-                          ? "text-zinc-500 hover:text-zinc-300"
-                          : "text-foreground hover:text-primary"
-                      }`}
-                      title="Add to Google Calendar"
-                    >
-                      + Calendar
-                    </a>
-
-                    <button
-                      type="button"
-                      onClick={() => toggleBookmark(e.id)}
-                      title={
-                        isSaved
-                          ? "Saved to your bookmarks"
-                          : "Save this event"
-                      }
-                      className={`size-9 border flex items-center justify-center transition-all shadow-[1px_1px_0px_0px_currentColor] ${
-                        isSaved
-                          ? "border-primary bg-primary text-white"
-                          : "border-foreground/30 bg-background text-foreground hover:border-primary"
-                      }`}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="1em"
-                        height="1em"
-                        fill={isSaved ? "currentColor" : "none"}
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        viewBox="0 0 24 24"
-                        className="size-4"
+                    <div className="flex items-center gap-2.5 ml-auto">
+                      <a
+                        href={`/api/v1/calendar/event/${encodeURIComponent(e.id)}.ics`}
+                        download
+                        className={`font-mono text-[10px] uppercase tracking-[0.08em] border px-2 py-1 transition-colors ${
+                          isClosed
+                            ? "border-zinc-700 text-zinc-500 hover:text-zinc-300"
+                            : "border-foreground/30 text-foreground hover:border-primary hover:text-primary"
+                        }`}
+                        title="Download .ics calendar file"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"
-                        />
-                      </svg>
-                    </button>
+                        .ICS
+                      </a>
+                      <a
+                        href={buildGoogleCalendarUrl(e)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`font-mono text-[11px] uppercase tracking-[0.1em] transition-colors ${
+                          isClosed
+                            ? "text-zinc-500 hover:text-zinc-300"
+                            : "text-foreground hover:text-primary"
+                        }`}
+                        title="Add to Google Calendar"
+                      >
+                        + GCal
+                      </a>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleBookmark(e.id)}
+                        title={
+                          isSaved
+                            ? "Saved to your bookmarks"
+                            : "Save this event"
+                        }
+                        className={`size-9 border flex items-center justify-center transition-all shadow-[1px_1px_0px_0px_currentColor] ${
+                          isSaved
+                            ? "border-primary bg-primary text-white"
+                            : "border-foreground/30 bg-background text-foreground hover:border-primary"
+                        }`}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="1em"
+                          height="1em"
+                          fill={isSaved ? "currentColor" : "none"}
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                          className="size-4"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </article>

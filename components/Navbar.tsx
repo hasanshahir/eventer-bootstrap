@@ -31,6 +31,7 @@ export default function Navbar({
   const router = useRouter();
   const [user, setUser] = useState<NavbarUser | null>(initialUser);
   const [signingOut, setSigningOut] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -49,25 +50,28 @@ export default function Navbar({
     } catch {}
     setUser(null);
     setSigningOut(false);
+    setMobileMenuOpen(false);
     router.push("/");
     router.refresh();
   }
 
-  const isRadar = pathname === "/" || pathname === "/events";
+  const isRadar = pathname === "/" || pathname.startsWith("/events");
   const isCities = pathname.startsWith("/cities");
   const isPassport = pathname.startsWith("/passport");
+  const isScan = pathname.startsWith("/organizer/scan");
   const now = new Date();
   const issueLabel = `Issue ${String(now.getMonth() + 1).padStart(2, "0")}.${String(
     now.getFullYear()
   ).slice(-2)} / Live edition`;
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-foreground/30 bg-background/90 backdrop-blur-md transition-colors duration-200">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-foreground/30 bg-background/95 backdrop-blur-md transition-colors duration-200">
       <div className="mx-auto grid h-[4.5rem] max-w-[1500px] grid-cols-[minmax(0,1fr)_auto] items-stretch px-4 sm:px-6 lg:grid-cols-[1fr_auto_1fr] lg:px-10">
         {/* Wordmark */}
         <Link
           className="group flex min-w-0 min-h-11 items-center gap-2 border-r border-foreground/30 pr-3 sm:gap-3 sm:pr-4 lg:border-r-0"
           href="/"
+          onClick={() => setMobileMenuOpen(false)}
         >
           <span className="grid size-8 shrink-0 place-items-center border border-foreground bg-primary font-mono text-[10px] font-bold text-white transition-transform group-hover:-rotate-3 shadow-[2px_2px_0px_0px_currentColor]">
             EV
@@ -92,7 +96,7 @@ export default function Navbar({
           <nav className="flex items-center gap-2 sm:gap-3" aria-label="Primary">
             <Link
               href="/"
-              className={`flex min-h-11 items-center px-1 text-xs font-semibold uppercase tracking-[0.12em] transition-colors ${
+              className={`hidden md:flex min-h-11 items-center px-1 text-xs font-semibold uppercase tracking-[0.12em] transition-colors ${
                 isRadar
                   ? "text-primary font-bold underline decoration-2 underline-offset-4"
                   : "text-foreground hover:text-primary"
@@ -102,7 +106,7 @@ export default function Navbar({
             </Link>
             <Link
               href="/cities"
-              className={`flex min-h-11 items-center px-1 text-xs font-semibold uppercase tracking-[0.12em] transition-colors ${
+              className={`hidden md:flex min-h-11 items-center px-1 text-xs font-semibold uppercase tracking-[0.12em] transition-colors ${
                 isCities
                   ? "text-primary font-bold underline decoration-2 underline-offset-4"
                   : "text-foreground hover:text-primary"
@@ -110,23 +114,33 @@ export default function Navbar({
             >
               Cities
             </Link>
-            {user && (
+            <Link
+              href="/passport"
+              className={`hidden md:flex min-h-11 items-center px-1 text-xs font-semibold uppercase tracking-[0.12em] transition-colors ${
+                isPassport
+                  ? "text-primary font-bold underline decoration-2 underline-offset-4"
+                  : "text-foreground hover:text-primary"
+              }`}
+            >
+              Passport
+            </Link>
+            {(user?.role === "ORGANIZER" || user?.role === "ADMIN") && (
               <Link
-                href="/passport"
-                className={`hidden sm:flex min-h-11 items-center px-1 text-xs font-semibold uppercase tracking-[0.12em] transition-colors ${
-                  isPassport
+                href="/organizer/scan"
+                className={`hidden xl:flex min-h-11 items-center px-1 text-xs font-semibold uppercase tracking-[0.12em] transition-colors ${
+                  isScan
                     ? "text-primary font-bold underline decoration-2 underline-offset-4"
                     : "text-foreground hover:text-primary"
                 }`}
               >
-                Passport
+                Scanner
               </Link>
             )}
 
             <ThemeToggle />
 
             {user ? (
-              <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2">
                 <Link
                   href="/account"
                   title={`Signed in as ${user.name || user.email}`}
@@ -153,7 +167,7 @@ export default function Navbar({
             ) : (
               <Link
                 href="/login"
-                className="inline-flex items-center h-10 border border-foreground bg-primary px-4 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-white hover:bg-blue-600 transition-all shadow-[2px_2px_0px_0px_currentColor] active:translate-x-0.5 active:translate-y-0.5"
+                className="inline-flex items-center h-10 border border-foreground bg-primary px-3.5 sm:px-4 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-white hover:bg-blue-600 transition-all shadow-[2px_2px_0px_0px_currentColor] active:translate-x-0.5 active:translate-y-0.5"
               >
                 Sign In
               </Link>
@@ -176,9 +190,82 @@ export default function Navbar({
                 <path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z" />
               </svg>
             </Link>
+
+            {/* Mobile Hamburger Button */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+              aria-expanded={mobileMenuOpen}
+              aria-label="Toggle navigation menu"
+              className="grid md:hidden size-10 place-items-center border border-foreground/30 bg-card text-foreground hover:border-primary shadow-[1px_1px_0px_0px_currentColor] cursor-pointer"
+            >
+              <span className="font-mono text-xs font-bold">
+                {mobileMenuOpen ? "✕" : "☰"}
+              </span>
+            </button>
           </nav>
         </div>
       </div>
+
+      {/* Mobile Dropdown Drawer */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-foreground/30 bg-card px-4 py-4 space-y-2 shadow-lg">
+          <div className="grid grid-cols-2 gap-2 font-mono text-xs uppercase tracking-[0.12em]">
+            <Link
+              href="/"
+              onClick={() => setMobileMenuOpen(false)}
+              className="border border-foreground/30 bg-background px-3 py-2.5 text-foreground hover:border-primary"
+            >
+              Radar Index
+            </Link>
+            <Link
+              href="/cities"
+              onClick={() => setMobileMenuOpen(false)}
+              className="border border-foreground/30 bg-background px-3 py-2.5 text-foreground hover:border-primary"
+            >
+              City Desks
+            </Link>
+            <Link
+              href="/passport"
+              onClick={() => setMobileMenuOpen(false)}
+              className="border border-foreground/30 bg-background px-3 py-2.5 text-foreground hover:border-primary"
+            >
+              DevPassport
+            </Link>
+            <Link
+              href="/organizer/new"
+              onClick={() => setMobileMenuOpen(false)}
+              className="border border-foreground bg-primary px-3 py-2.5 text-white font-semibold"
+            >
+              Submit Event
+            </Link>
+            <Link
+              href="/organizer/scan"
+              onClick={() => setMobileMenuOpen(false)}
+              className="border border-foreground/30 bg-background px-3 py-2.5 text-foreground hover:border-primary"
+            >
+              Gate Scanner
+            </Link>
+            <Link
+              href="/account"
+              onClick={() => setMobileMenuOpen(false)}
+              className="border border-foreground/30 bg-background px-3 py-2.5 text-foreground hover:border-primary"
+            >
+              Account
+            </Link>
+          </div>
+          {user && (
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={signingOut}
+              className="w-full border border-foreground/30 bg-background py-2 font-mono text-xs uppercase text-muted-foreground hover:text-foreground"
+            >
+              {signingOut ? "Signing out…" : `Sign Out (${user.email})`}
+            </button>
+          )}
+        </div>
+      )}
     </header>
   );
 }
