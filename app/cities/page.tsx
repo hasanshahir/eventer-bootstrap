@@ -154,7 +154,7 @@ export default async function CitiesPage() {
                             : `/?city=${encodeURIComponent(desk.city)}`
                         }
                         className="flex h-full min-h-[18rem] flex-col outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
-                        aria-label={`View events in ${desk.city}`}
+                        
                       >
                         {/* Top Card Row */}
                         <div className="flex items-start justify-between border-b border-foreground/20 pb-4">
