@@ -62,6 +62,10 @@ export default function Feed({ events }: { events: EventCard[] }) {
   useEffect(() => {
     const c = params.get("city");
     const s = params.get("scope");
+    const t = params.get("type");
+    const queryParam = params.get("q");
+    if (t) setType(t);
+    if (queryParam) setQ(queryParam);
     if (s) {
       const upper = s.toUpperCase();
       if (upper === "PAKISTAN" || upper === "GLOBAL" || upper === "ALL") {
@@ -95,6 +99,21 @@ export default function Feed({ events }: { events: EventCard[] }) {
       setCity("All");
     }
   }, [params]);
+
+  useEffect(() => {
+    try {
+      const nextParams = new URLSearchParams();
+      if (scope !== "ALL") nextParams.set("scope", scope.toLowerCase());
+      if (city && city !== "All") nextParams.set("city", city);
+      if (type && type !== "All") nextParams.set("type", type);
+      if (q.trim()) nextParams.set("q", q.trim());
+      const qs = nextParams.toString();
+      const targetUrl = qs
+        ? `${window.location.pathname}?${qs}${window.location.hash}`
+        : `${window.location.pathname}${window.location.hash}`;
+      window.history.replaceState(null, "", targetUrl);
+    } catch {}
+  }, [scope, city, type, q]);
 
   function handleScopeChange(nextScope: "ALL" | "PAKISTAN" | "GLOBAL") {
     setScope(nextScope);

@@ -1,11 +1,40 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { IBM_Plex_Mono, IBM_Plex_Sans, Newsreader } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import { auth } from "@/lib/auth";
 import "./globals.css";
 
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-sans",
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-mono",
+});
+
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  display: "swap",
+  variable: "--font-heading",
+});
+
 export const metadata: Metadata = {
-  title: "Eventr — Pakistan’s Developer & Tech Event Hub",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://eventer-bootstrap.vercel.app"
+  ),
+  title: {
+    default: "Eventr — Pakistan’s Developer & Tech Event Hub",
+    template: "%s | Eventr Pakistan",
+  },
   description:
     "Every hackathon, developer conference, workshop, and meetup across Pakistan. Curated by city, sorted by registration deadlines.",
 };
@@ -41,7 +70,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className="h-full antialiased scroll-smooth"
+      className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} ${newsreader.variable} h-full antialiased scroll-smooth`}
       suppressHydrationWarning
     >
       <head>
