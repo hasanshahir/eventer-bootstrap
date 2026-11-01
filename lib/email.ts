@@ -38,12 +38,26 @@ export async function sendTransactionalEmail(params: {
   url?: string;
 }): Promise<{ ok: boolean }> {
   const from = env.EMAIL_FROM || "Eventr Dispatch <noreply@eventr.pk>";
+  const isProd = env.NODE_ENV === "production" && process.env.NODE_ENV === "production";
+
+  if (isProd) {
+    if (env.AUTH_TEST_TRANSPORT || process.env.AUTH_TEST_TRANSPORT === "true") {
+      throw new Error(
+        "AUTH_TEST_TRANSPORT=true is forbidden in production."
+      );
+    }
+    if (!env.RESEND_API_KEY) {
+      throw new Error("RESEND_API_KEY is required in production to send emails.");
+    }
+  }
+
   const useTestTransport =
-    env.AUTH_TEST_TRANSPORT ||
-    process.env.AUTH_TEST_TRANSPORT === "true" ||
-    env.NODE_ENV === "test" ||
-    !env.RESEND_API_KEY ||
-    env.RESEND_API_KEY.startsWith("re_fake");
+    !isProd &&
+    (env.AUTH_TEST_TRANSPORT ||
+      process.env.AUTH_TEST_TRANSPORT === "true" ||
+      env.NODE_ENV === "test" ||
+      !env.RESEND_API_KEY ||
+      env.RESEND_API_KEY.startsWith("re_fake"));
 
   if (useTestTransport) {
     const dir = path.dirname(OUTBOX_PATH);
@@ -83,4 +97,3 @@ export async function sendTransactionalEmail(params: {
 
   return { ok: true };
 }
-

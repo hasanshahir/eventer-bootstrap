@@ -96,9 +96,9 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
@@ -120,7 +120,6 @@ function buildGoogleCalendarUrl(e: EventCard) {
 export default function Feed({ events }: { events: EventCard[] }) {
   const params = useSearchParams();
   const [feedEvents, setFeedEvents] = useState<EventCard[]>(events);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [scope, setScope] = useState<"ALL" | "PAKISTAN" | "GLOBAL">("ALL");
 
   const [stack, setStack] = useState<string[]>(["Next.js", "Python", "AI/ML"]);
@@ -136,30 +135,14 @@ export default function Feed({ events }: { events: EventCard[] }) {
     setFeedEvents(events);
   }, [events]);
 
-  async function handleSyncRadar() {
-    setIsSyncing(true);
-    try {
-      const res = await fetch("/api/discover", { method: "POST" });
-      const data = await res.json();
-      if (data?.events && Array.isArray(data.events)) {
-        const { toCard } = await import("@/lib/ev");
-        setFeedEvents(data.events.map(toCard));
-      }
-    } catch (err) {
-      console.error("Live radar sync error:", err);
-    } finally {
-      setIsSyncing(false);
-    }
-  }
-
   useEffect(() => {
     try {
-      const s = localStorage.getItem("eventr_stack") || localStorage.getItem("eventer_stack");
+      const s = localStorage.getItem("eventr_stack");
       if (s) setStack(JSON.parse(s));
-      const b = localStorage.getItem("eventr_bookmarks") || localStorage.getItem("eventer_bookmarks");
+      const b = localStorage.getItem("eventr_bookmarks");
       if (b) setBookmarks(JSON.parse(b));
-      localStorage.removeItem("eventr_user"); localStorage.removeItem("eventer_user");
-    } catch {}
+      localStorage.removeItem("eventr_user");
+    } catch { }
   }, []);
 
   // Sync city & scope filters dynamically whenever URL parameters change
@@ -201,7 +184,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
     setStack(next);
     try {
       localStorage.setItem("eventr_stack", JSON.stringify(next));
-    } catch {}
+    } catch { }
   }
 
   function toggleBookmark(id: string) {
@@ -209,7 +192,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
       const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
       try {
         localStorage.setItem("eventr_bookmarks", JSON.stringify(next));
-      } catch {}
+      } catch { }
       return next;
     });
   }
@@ -575,11 +558,10 @@ export default function Feed({ events }: { events: EventCard[] }) {
                           setCity(cName);
                         }
                       }}
-                      className={`group grid min-h-20 grid-cols-[2rem_1fr_auto] items-center gap-2 border px-4 py-3 text-left outline-none transition-all shadow-[2px_2px_0px_0px_currentColor] cursor-pointer ${
-                        isSelected
+                      className={`group grid min-h-20 grid-cols-[2rem_1fr_auto] items-center gap-2 border px-4 py-3 text-left outline-none transition-all shadow-[2px_2px_0px_0px_currentColor] cursor-pointer ${isSelected
                           ? "bg-foreground text-background border-foreground font-bold"
                           : "border-foreground/30 bg-card hover:border-primary text-foreground"
-                      }`}
+                        }`}
                     >
                       <span className={`font-mono text-[10px] ${isSelected ? "text-background/70" : "text-muted-foreground"}`}>
                         {String(i + 1).padStart(2, "0")}
@@ -592,11 +574,10 @@ export default function Feed({ events }: { events: EventCard[] }) {
                           {CITY_DOSSIERS[cName]?.subtitle || "Regional Hub"}
                         </span>
                       </span>
-                      <span className={`grid size-8 place-items-center border font-mono text-xs font-semibold ${
-                        isSelected
+                      <span className={`grid size-8 place-items-center border font-mono text-xs font-semibold ${isSelected
                           ? "border-primary bg-primary text-white"
                           : "border-foreground/30 text-foreground"
-                      }`}>
+                        }`}>
                         {count}
                       </span>
                     </button>
@@ -689,19 +670,9 @@ export default function Feed({ events }: { events: EventCard[] }) {
                 Active Tech Radar
               </h2>
             </div>
-            
+
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleSyncRadar}
-                disabled={isSyncing}
-                className="h-10 px-4 border border-foreground bg-primary font-mono text-xs font-semibold uppercase tracking-[0.1em] text-white hover:bg-blue-600 transition-all shadow-[2px_2px_0px_0px_currentColor] active:translate-x-0.5 active:translate-y-0.5 flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-                title="Trigger live aggregation from Devpost, GDG, Luma, and Campus desks"
-              >
-                <span className={isSyncing ? "animate-spin" : ""}>🔄</span>
-                <span>{isSyncing ? "Scanning Sources…" : "Sync Live Radar"}</span>
-              </button>
-              <p className="font-mono text-xs text-muted-foreground hidden sm:block">
+              <p className="font-mono text-xs text-muted-foreground">
                 Showing {shown.length} of {feedEvents.length} open dispatches
               </p>
             </div>
@@ -715,33 +686,30 @@ export default function Feed({ events }: { events: EventCard[] }) {
             <button
               type="button"
               onClick={() => handleScopeChange("ALL")}
-              className={`h-9 px-3.5 border font-mono text-xs uppercase tracking-[0.1em] transition-all shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${
-                scope === "ALL"
+              className={`h-9 px-3.5 border font-mono text-xs uppercase tracking-[0.1em] transition-all shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${scope === "ALL"
                   ? "border-primary bg-primary text-white font-bold"
                   : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
-              }`}
+                }`}
             >
               All Dispatches ({feedEvents.length})
             </button>
             <button
               type="button"
               onClick={() => handleScopeChange("PAKISTAN")}
-              className={`h-9 px-3.5 border font-mono text-xs uppercase tracking-[0.1em] transition-all shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${
-                scope === "PAKISTAN"
+              className={`h-9 px-3.5 border font-mono text-xs uppercase tracking-[0.1em] transition-all shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${scope === "PAKISTAN"
                   ? "border-primary bg-primary text-white font-bold"
                   : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
-              }`}
+                }`}
             >
               🇵🇰 Pakistan (On-Ground & Local) ({pakistanEventsCount})
             </button>
             <button
               type="button"
               onClick={() => handleScopeChange("GLOBAL")}
-              className={`h-9 px-3.5 border font-mono text-xs uppercase tracking-[0.1em] transition-all shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${
-                scope === "GLOBAL"
+              className={`h-9 px-3.5 border font-mono text-xs uppercase tracking-[0.1em] transition-all shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${scope === "GLOBAL"
                   ? "border-primary bg-primary text-white font-bold"
                   : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
-              }`}
+                }`}
             >
               🌐 Global (Virtual Only) ({globalEventsCount})
             </button>
@@ -764,11 +732,10 @@ export default function Feed({ events }: { events: EventCard[] }) {
                   <button
                     key={t}
                     onClick={() => toggle(t)}
-                    className={`font-mono text-xs px-3 py-1 border transition-all cursor-pointer ${
-                      on
+                    className={`font-mono text-xs px-3 py-1 border transition-all cursor-pointer ${on
                         ? "bg-primary text-white border-primary shadow-[2px_2px_0px_0px_currentColor] font-bold"
                         : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
-                    }`}
+                      }`}
                   >
                     {t}
                   </button>
@@ -804,11 +771,10 @@ export default function Feed({ events }: { events: EventCard[] }) {
               <button
                 type="button"
                 onClick={() => setShowSavedOnly(!showSavedOnly)}
-                className={`h-11 px-4 border font-mono text-xs uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-1.5 shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${
-                  showSavedOnly
+                className={`h-11 px-4 border font-mono text-xs uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-1.5 shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${showSavedOnly
                     ? "border-primary bg-primary text-white font-bold"
                     : "border-foreground/30 bg-card text-foreground hover:border-primary"
-                }`}
+                  }`}
               >
                 <span>★ Saved</span>
                 <span className="font-bold">({bookmarks.length})</span>
@@ -849,11 +815,10 @@ export default function Feed({ events }: { events: EventCard[] }) {
                         if (c !== "All" && c !== "Online") setSelectedCityDesk(c);
                         else if (c === "Online") setSelectedCityDesk("Online");
                       }}
-                      className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.1em] transition-colors shadow-[1px_1px_0px_0px_currentColor] cursor-pointer flex items-center gap-1.5 ${
-                        isCityActive
+                      className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.1em] transition-colors shadow-[1px_1px_0px_0px_currentColor] cursor-pointer flex items-center gap-1.5 ${isCityActive
                           ? "border-primary bg-primary text-white font-bold"
                           : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
-                      }`}
+                        }`}
                     >
                       <span>{c}</span>
                       <span className={`text-[10px] ${isCityActive ? "text-white/80" : "text-muted-foreground"}`}>
@@ -871,11 +836,10 @@ export default function Feed({ events }: { events: EventCard[] }) {
                   <button
                     key={t}
                     onClick={() => setType(t)}
-                    className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.1em] transition-colors shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${
-                      type.toUpperCase() === t.toUpperCase()
+                    className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.1em] transition-colors shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${type.toUpperCase() === t.toUpperCase()
                         ? "border-foreground bg-foreground text-background font-bold"
                         : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
-                    }`}
+                      }`}
                   >
                     {t}
                   </button>
@@ -902,19 +866,17 @@ export default function Feed({ events }: { events: EventCard[] }) {
               <article
                 key={e.id}
                 id={`event-${e.id}`}
-                className={`group min-h-[22rem] border transition-all flex flex-col justify-between p-6 sm:p-7 ${
-                  isClosed
+                className={`group min-h-[22rem] border transition-all flex flex-col justify-between p-6 sm:p-7 ${isClosed
                     ? "border-zinc-800 bg-zinc-950/60 opacity-60 grayscale-[60%] hover:opacity-95 hover:grayscale-0 hover:border-zinc-700 shadow-none text-zinc-400"
                     : "border-foreground/30 bg-card hover:border-primary hover:bg-background shadow-[2px_2px_0px_0px_currentColor]"
-                }`}
+                  }`}
               >
                 <div>
                   {/* Top card row */}
                   <div className="flex items-center justify-between border-b border-foreground/20 pb-3 mb-4">
                     <span
-                      className={`font-heading text-4xl italic transition-colors ${
-                        isClosed ? "text-zinc-600" : "text-muted-foreground group-hover:text-primary"
-                      }`}
+                      className={`font-heading text-4xl italic transition-colors ${isClosed ? "text-zinc-600" : "text-muted-foreground group-hover:text-primary"
+                        }`}
                     >
                       {padIndex}
                     </span>
@@ -934,11 +896,10 @@ export default function Feed({ events }: { events: EventCard[] }) {
                         {e.type}
                       </span>
                       <span
-                        className={`font-mono text-[10px] font-semibold uppercase px-2 py-0.5 border ${
-                          isGlobalEvent
+                        className={`font-mono text-[10px] font-semibold uppercase px-2 py-0.5 border ${isGlobalEvent
                             ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-400"
                             : "border-primary bg-primary/10 text-primary"
-                        }`}
+                          }`}
                       >
                         {isGlobalEvent ? "🌐 Global Virtual" : `🇵🇰 ${e.city}`}
                       </span>
@@ -947,9 +908,8 @@ export default function Feed({ events }: { events: EventCard[] }) {
 
                   {/* Title & Organization */}
                   <h3
-                    className={`font-heading text-3xl font-bold leading-tight tracking-tight transition-colors ${
-                      isClosed ? "text-zinc-400" : "text-foreground group-hover:text-primary"
-                    }`}
+                    className={`font-heading text-3xl font-bold leading-tight tracking-tight transition-colors ${isClosed ? "text-zinc-400" : "text-foreground group-hover:text-primary"
+                      }`}
                   >
                     {e.title}
                   </h3>
@@ -1027,9 +987,8 @@ export default function Feed({ events }: { events: EventCard[] }) {
                       href={buildGoogleCalendarUrl(e)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`font-mono text-[11px] uppercase tracking-[0.1em] transition-colors ${
-                        isClosed ? "text-zinc-500 hover:text-zinc-300" : "text-foreground hover:text-primary"
-                      }`}
+                      className={`font-mono text-[11px] uppercase tracking-[0.1em] transition-colors ${isClosed ? "text-zinc-500 hover:text-zinc-300" : "text-foreground hover:text-primary"
+                        }`}
                       title="Add to Google Calendar"
                     >
                       + Calendar
@@ -1039,11 +998,10 @@ export default function Feed({ events }: { events: EventCard[] }) {
                       type="button"
                       onClick={() => toggleBookmark(e.id)}
                       title={isSaved ? "Saved to your bookmarks" : "Save this event"}
-                      className={`size-9 border flex items-center justify-center transition-all shadow-[1px_1px_0px_0px_currentColor] ${
-                        isSaved
+                      className={`size-9 border flex items-center justify-center transition-all shadow-[1px_1px_0px_0px_currentColor] ${isSaved
                           ? "border-primary bg-primary text-white"
                           : "border-foreground/30 bg-background text-foreground hover:border-primary"
-                      }`}
+                        }`}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="size-4">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />

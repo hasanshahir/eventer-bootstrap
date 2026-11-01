@@ -9,8 +9,8 @@ function getKey(): Buffer {
 }
 
 /**
- * Encrypts sensitive PII (such as User.phoneEncrypted) at rest using AES-256-GCM.
- */
+  * Encrypts sensitive PII (such as User.phoneEncrypted) at rest using AES-256-GCM.
+  */
 export function encryptPii(plaintext: string): string {
   const clean = plaintext.trim();
   if (!clean) return "";
@@ -22,8 +22,8 @@ export function encryptPii(plaintext: string): string {
 }
 
 /**
- * Decrypts AES-256-GCM encrypted PII.
- */
+  * Decrypts AES-256-GCM encrypted PII.
+  */
 export function decryptPii(ciphertext?: string | null): string | null {
   if (!ciphertext) return null;
   if (!ciphertext.startsWith("v1:")) return null;
@@ -43,11 +43,18 @@ export function decryptPii(ciphertext?: string | null): string | null {
 }
 
 /**
- * Detects whether a legacy User.rollNumber string is actually a phone number (fixes S-13).
- */
+  * Detects whether a legacy User.rollNumber string is actually a phone number (fixes S-13).
+  * Matches Pakistani numbers (+923..., 00923..., 03..., 3XXXXXXXXX) and E.164 international
+  * numbers (+1..., +44...) while never matching university roll numbers (e.g. 22K-4123, FA21-BCS-042, 24100123).
+  */
 export function isLikelyPhoneNumber(val?: string | null): boolean {
   if (!val) return false;
-  const digits = val.replace(/[\s\-().]/g, "");
-  return /^(\+?92|0092|0)?3\d{9}$/.test(digits);
+  const trimmed = val.trim();
+  // Academic roll numbers containing letters (e.g. 22K-4123, FA21-BCS-042) are never phone numbers
+  if (/[a-zA-Z]/.test(trimmed)) return false;
+  const digits = trimmed.replace(/[\s\-().]/g, "");
+  // Pakistani mobile/landline or explicit international +E.164 (10 to 15 digits)
+  if (/^(\+?92|0092|0)?3\d{9}$/.test(digits)) return true;
+  if (/^\+\d{10,15}$/.test(digits)) return true;
+  return false;
 }
-

@@ -1,18 +1,21 @@
 "use client";
-import { useState } from "react";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const inp =
-  "w-full bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 px-4 py-2.5 text-sm text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-600 focus:border-blue-600 dark:focus:border-blue-500 outline-none font-mono shadow-sm transition-colors";
+  "w-full bg-background border border-foreground/30 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary outline-none font-mono transition-colors";
 
 interface ExtractedEventForm {
   title?: string;
-  organizer?: string;
   city?: string;
   venue?: string;
   startsAt?: string;
   endsAt?: string;
   type?: string;
+  mode?: string;
+  registrationUrl?: string;
   description?: string;
   tags?: string[];
   tagsStr: string;
@@ -21,13 +24,28 @@ interface ExtractedEventForm {
 
 export default function NewEventPage() {
   const router = useRouter();
-  const [tab, setTab] = useState<"text" | "flyer">("text");
+  const [authStatus, setAuthStatus] = useState<"checking" | "authenticated" | "unauthenticated">("checking");
+  const [tab, setTab] = useState<"text" | "flyer" | "manual">("text");
   const [text, setText] = useState("");
   const [img, setImg] = useState<{ data: string; mime: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [submittedPending, setSubmittedPending] = useState(false);
   const [source, setSource] = useState("");
+  const [turnstileToken] = useState<string>("");
   const [ev, setEv] = useState<ExtractedEventForm | null>(null);
+
+  useEffect(() => {
+    fetch("/api/v1/account")
+      .then((res) => {
+        if (res.status === 401) {
+          setAuthStatus("unauthenticated");
+        } else {
+          setAuthStatus("authenticated");
+        }
+      })
+      .catch(() => setAuthStatus("unauthenticated"));
+  }, []);
 
   function onFile(f?: File) {
     if (!f) return;
@@ -36,8 +54,25 @@ export default function NewEventPage() {
       return;
     }
     const r = new FileReader();
-    r.onload = () => setImg({ data: String(r.result).split(",")[1], mime: f.type });
+    r.onload = () =>
+      setImg({ data: String(r.result).split(",")[1], mime: f.type });
     r.readAsDataURL(f);
+  }
+
+  function openManualForm() {
+    setSource("manual");
+    setEv({
+      title: "",
+      city: "Karachi",
+      venue: "",
+      startsAt: new Date(Date.now() + 7 * 86400 * 1000).toISOString().slice(0, 16),
+      endsAt: "",
+      type: "HACKATHON",
+      mode: "IN_PERSON",
+      registrationUrl: "",
+      description: "",
+      tagsStr: "Next.js, AI/ML",
+    });
   }
 
   async function parse() {
@@ -53,12 +88,17 @@ export default function NewEventPage() {
           mimeType: img?.mime,
         }),
       });
+      if (res.status === 401) {
+        setAuthStatus("unauthenticated");
+        setErr("Please sign in to parse or submit an event.");
+        setBusy(false);
+        return;
+      }
       const d = (await res.json()) as {
         source?: string;
         error?: string;
         event?: {
           title?: string;
-          organizer?: string;
           city?: string;
           venue?: string;
           startsAt?: string;
@@ -69,13 +109,22 @@ export default function NewEventPage() {
         };
       };
       if (!res.ok || !d.event) {
-        setErr(d.error || "Parse failed. Please fill the form manually.");
+        setErr(
+          d.error ||
+            "AI parser unavailable. Switched to manual entry so you can submit directly."
+        );
+        openManualForm();
       } else {
         setSource(d.source ?? "gemini-flash");
-        setEv({ ...d.event, tagsStr: (d.event.tags ?? []).join(", ") });
+        setEv({
+          ...d.event,
+          mode: "IN_PERSON",
+          tagsStr: (d.event.tags ?? []).join(", "),
+        });
       }
     } catch {
-      setErr("Parse failed. Please try again.");
+      setErr("Parse failed. Switched to manual entry.");
+      openManualForm();
     }
     setBusy(false);
   }
@@ -84,130 +133,223 @@ export default function NewEventPage() {
     if (!ev) return;
     setBusy(true);
     setErr("");
-    const { tagsStr, ...rest } = ev;
-    const res = await fetch("/api/v1/events", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...rest,
-        tags: tagsStr
-          .split(",")
-          .map((s: string) => s.trim())
-          .filter(Boolean),
-      }),
-    });
-    const d = (await res.json()) as { ok?: boolean; error?: string };
-    if (d.ok) {
-      router.push("/");
-    } else {
-      setErr(d.error ?? "Publish failed");
+    try {
+      const { tagsStr, startsAt, endsAt, ...rest } = ev;
+      const res = await fetch("/api/v1/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...rest,
+          startTime: startsAt || new Date(Date.now() + 7 * 86400 * 1000).toISOString(),
+          endTime: endsAt || null,
+          mode: ev.mode || "IN_PERSON",
+          turnstileToken: turnstileToken || undefined,
+          tags: tagsStr
+            .split(",")
+            .map((s: string) => s.trim())
+            .filter(Boolean),
+        }),
+      });
+      if (res.status === 401) {
+        setAuthStatus("unauthenticated");
+        setErr("Please sign in to submit an event.");
+        setBusy(false);
+        return;
+      }
+      const d = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        event?: { status?: string };
+      };
+      if (res.ok && d.ok) {
+        if (d.event?.status === "PENDING") {
+          setSubmittedPending(true);
+          setBusy(false);
+        } else {
+          router.push("/");
+        }
+      } else {
+        setErr(d.error ?? "Submission failed. Please check required fields.");
+        setBusy(false);
+      }
+    } catch {
+      setErr("Network error while submitting event.");
       setBusy(false);
     }
   }
 
   const set =
     (k: string) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       setEv((prev) => (prev ? { ...prev, [k]: e.target.value } : null));
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-zinc-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white dark:selection:bg-blue-500 dark:selection:text-black transition-colors">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pt-[4.5rem] transition-colors">
       {/* Editorial Header */}
-      <header className="border-b-2 border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#030712] px-4 py-12 sm:px-8 lg:px-12 transition-colors">
+      <header className="border-b-2 border-foreground/30 bg-card px-4 py-12 sm:px-8 lg:px-12 transition-colors">
         <div className="mx-auto max-w-[1200px]">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-y border-slate-200 dark:border-zinc-800 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.18em]">
-            <span className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
-              <span className="size-2 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse" />
-              Organizer Dispatch Desk &bull; Multimodal Ingestion
+          <div className="flex flex-wrap items-center justify-between gap-3 border-y border-foreground/30 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.18em]">
+            <span className="flex items-center gap-2 text-primary">
+              <span className="size-2 rounded-full bg-primary animate-pulse" />
+              Organizer Dispatch Desk &bull; Verified Organizer Membership
             </span>
-            <span className="text-slate-500 dark:text-zinc-500 font-mono">Engine: Google Gemini Flash</span>
+            <span className="text-muted-foreground font-mono">
+              Moderation: PENDING &rarr; APPROVED
+            </span>
           </div>
 
-          <h1 className="mt-8 text-4xl sm:text-6xl font-extrabold tracking-tight text-white">
+          <h1 className="mt-8 font-heading text-4xl sm:text-6xl font-bold tracking-tight text-foreground">
             Submit an Event.
           </h1>
-          <p className="mt-4 max-w-[60ch] border-l-4 border-blue-600 dark:border-blue-500 pl-4 text-sm sm:text-base font-medium leading-relaxed text-slate-600 dark:text-zinc-300">
-            Paste a messy WhatsApp forward or upload an event flyer. Eventr AI automatically extracts the dates, venue, city, and tags into structured radar intelligence.
+          <p className="mt-4 max-w-[60ch] border-l-4 border-primary pl-4 text-sm sm:text-base font-medium leading-relaxed text-muted-foreground">
+            Paste a society announcement, upload an event flyer, or fill the structured dispatch form. Organizer attribution is derived strictly from your authenticated account membership.
           </p>
         </div>
       </header>
 
       <main className="mx-auto w-full max-w-[1200px] px-4 py-12 sm:px-8 lg:px-12 flex-1 space-y-8">
+        {authStatus === "unauthenticated" && (
+          <div className="border-2 border-foreground bg-card p-8 space-y-4 shadow-[4px_4px_0px_0px_currentColor]">
+            <h2 className="font-heading text-2xl font-bold text-foreground">
+              Sign in required to submit or parse events
+            </h2>
+            <p className="font-mono text-xs text-muted-foreground max-w-[55ch]">
+              Event submissions are bound to your authenticated OrganizerMember profile and reviewed before appearing on the public radar.
+            </p>
+            <Link
+              href="/login?callbackUrl=/organizer/new"
+              className="inline-flex items-center gap-2 border border-foreground bg-primary px-6 py-3 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-white hover:bg-blue-600 transition-colors shadow-[2px_2px_0px_0px_currentColor]"
+            >
+              Sign In to Continue &rarr;
+            </Link>
+          </div>
+        )}
+
+        {submittedPending && (
+          <div className="border-2 border-primary bg-primary/10 p-6 space-y-3">
+            <p className="font-mono text-xs font-bold uppercase tracking-wider text-primary">
+              ✓ Dispatch Submitted for Verification (Status: PENDING)
+            </p>
+            <p className="font-mono text-xs text-foreground">
+              Your event has been recorded under your organizer profile and queued for admin moderation (`APPROVED`).
+            </p>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 border border-foreground bg-primary px-4 py-2 font-mono text-xs font-semibold uppercase text-white"
+            >
+              Return to Radar &rarr;
+            </Link>
+          </div>
+        )}
+
         {/* Ingestion Mode Toggle */}
-        <div className="flex gap-2">
-          {(["text", "flyer"] as const).map((t) => (
+        <div className="flex flex-wrap gap-2">
+          {(["text", "flyer", "manual"] as const).map((t) => (
             <button
               key={t}
-              onClick={() => setTab(t)}
-              className={`font-mono text-xs font-semibold uppercase tracking-[0.14em] px-4 py-2.5 rounded-lg border transition-colors ${
+              type="button"
+              onClick={() => {
+                setTab(t);
+                if (t === "manual" && !ev) openManualForm();
+              }}
+              className={`font-mono text-xs font-semibold uppercase tracking-[0.14em] px-4 py-2.5 border transition-colors ${
                 tab === t
-                  ? "bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-600 dark:border-blue-500/50 shadow-sm"
-                  : "border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
+                  ? "bg-primary text-white border-foreground shadow-[2px_2px_0px_0px_currentColor]"
+                  : "border-foreground/30 bg-card text-muted-foreground hover:text-foreground"
               }`}
             >
-              {t === "text" ? "Paste WhatsApp / Text" : "Upload Event Flyer"}
+              {t === "text"
+                ? "Paste WhatsApp / Text"
+                : t === "flyer"
+                ? "Upload Event Flyer"
+                : "Manual Entry"}
             </button>
           ))}
         </div>
 
         {/* Input Zone */}
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6 sm:p-8 space-y-5">
-          {tab === "text" ? (
-            <textarea
-              className={inp + " h-48 leading-relaxed rounded-xl"}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder={`*FAST AI Summit 2026* 🚀\nSalam everyone! Join us 21 Nov 2026, 10am at FAST-NUCES Islamabad campus.\nTracks: Generative AI, Robotics, Next.js, and Agentic Workflows.\nRegistration: https://fast.edu.pk/summit`}
-            />
-          ) : (
-            <div className="border-2 border-dashed border-zinc-800 rounded-xl p-8 text-center bg-zinc-950">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => onFile(e.target.files?.[0])}
-                className="font-mono text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:border file:border-zinc-700 file:rounded-lg file:bg-zinc-800 file:text-zinc-200 file:font-mono file:text-xs hover:file:bg-zinc-700"
+        {tab !== "manual" && (
+          <div className="border border-foreground/30 bg-card p-6 sm:p-8 space-y-5 shadow-[2px_2px_0px_0px_currentColor]">
+            {tab === "text" ? (
+              <textarea
+                className={inp + " h-48 leading-relaxed"}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder={`*FAST AI Summit 2026*\nJoin us 21 Nov 2026, 10am at FAST-NUCES Islamabad campus.\nTracks: Generative AI, Robotics, Next.js, and Agentic Workflows.\nRegistration: https://fast.edu.pk/summit`}
               />
-              <p className="mt-3 font-mono text-[10px] text-slate-500 dark:text-zinc-500">
-                Supports PNG, JPG, or WEBP up to 4MB.
-              </p>
+            ) : (
+              <div className="border-2 border-dashed border-foreground/30 p-8 text-center bg-background">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => onFile(e.target.files?.[0])}
+                  className="font-mono text-xs text-muted-foreground file:mr-4 file:py-2 file:px-4 file:border file:border-foreground/40 file:bg-card file:text-foreground file:font-mono file:text-xs"
+                />
+                <p className="mt-3 font-mono text-[10px] text-muted-foreground">
+                  Supports PNG, JPG, or WEBP up to 4MB.
+                </p>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={parse}
+                disabled={busy || (tab === "text" ? !text.trim() : !img)}
+                className="inline-flex items-center gap-2 border border-foreground bg-primary text-white font-semibold font-mono text-xs uppercase tracking-[0.12em] px-6 py-3 hover:bg-blue-600 transition-all disabled:opacity-50 shadow-[2px_2px_0px_0px_currentColor]"
+              >
+                {busy ? "Parsing with Gemini…" : "Parse with Gemini Flash"}
+              </button>
+              <button
+                type="button"
+                onClick={openManualForm}
+                className="inline-flex items-center gap-2 border border-foreground/40 bg-background text-foreground font-semibold font-mono text-xs uppercase tracking-[0.12em] px-5 py-3 hover:border-primary transition-all"
+              >
+                Fill Form Manually
+              </button>
             </div>
-          )}
+          </div>
+        )}
 
-          <button
-            onClick={parse}
-            disabled={busy || (tab === "text" ? !text.trim() : !img)}
-            className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 bg-emerald-500 text-black font-semibold font-mono text-xs uppercase tracking-[0.12em] px-6 py-3 hover:bg-emerald-400 hover:shadow-[0_0_20px_-4px_rgba(16,185,129,0.7)] transition-all disabled:opacity-50"
-          >
-            {busy ? "Parsing with AI..." : "✨ Parse with Gemini"}
-          </button>
-        </div>
-
-        {/* Extracted Structured Event Review Form */}
+        {/* Structured Event Review Form */}
         {ev && (
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-6 sm:p-8 space-y-5">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-              <h2 className="text-xl sm:text-2xl font-bold text-white">Extracted Metadata</h2>
-              <span className="font-mono text-[10px] uppercase px-2.5 py-0.5 rounded border border-cyan-500/40 bg-cyan-500/10 text-cyan-400">
-                Source: {source}
+          <div className="border-2 border-foreground bg-card p-6 sm:p-8 space-y-5 shadow-[4px_4px_0px_0px_currentColor]">
+            <div className="flex items-center justify-between border-b border-foreground/20 pb-3">
+              <h2 className="font-heading text-2xl font-bold text-foreground">
+                Structured Event Dispatch
+              </h2>
+              <span className="font-mono text-[10px] uppercase px-2.5 py-0.5 border border-primary bg-primary/10 text-primary">
+                Source: {source || "manual"}
               </span>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4">
-              {(["title", "organizer", "city", "venue", "startsAt", "endsAt", "type"] as const).map(
-                (k) => (
-                  <label key={k} className="block">
-                    <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-600 dark:text-zinc-400 block mb-1.5 font-semibold">
-                      {k}
-                    </span>
-                    <input className={inp} value={String(ev[k] ?? "")} onChange={set(k)} />
-                  </label>
-                )
-              )}
+              {(
+                [
+                  ["title", "Event Title"],
+                  ["city", "City"],
+                  ["venue", "Venue / Campus"],
+                  ["startsAt", "Start Date/Time (ISO or PKT)"],
+                  ["endsAt", "End Date/Time (Optional)"],
+                  ["type", "Format (HACKATHON, CONFERENCE, MEETUP, WORKSHOP)"],
+                ] as const
+              ).map(([k, label]) => (
+                <label key={k} className="block">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground block mb-1.5 font-semibold">
+                    {label}
+                  </span>
+                  <input
+                    className={inp}
+                    value={String(ev[k] ?? "")}
+                    onChange={set(k)}
+                  />
+                </label>
+              ))}
             </div>
 
             <label className="block">
-              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-600 dark:text-zinc-400 block mb-1.5 font-semibold">
-                Description
+              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground block mb-1.5 font-semibold">
+                Description (Minimum 20 characters)
               </span>
               <textarea
                 className={inp + " h-24"}
@@ -217,24 +359,29 @@ export default function NewEventPage() {
             </label>
 
             <label className="block">
-              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-600 dark:text-zinc-400 block mb-1.5 font-semibold">
+              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground block mb-1.5 font-semibold">
                 Tags (Comma-Separated)
               </span>
-              <input className={inp} value={ev.tagsStr} onChange={set("tagsStr")} />
+              <input
+                className={inp}
+                value={ev.tagsStr}
+                onChange={set("tagsStr")}
+              />
             </label>
 
             <button
+              type="button"
               onClick={publish}
               disabled={busy}
-              className="inline-flex items-center gap-2 border border-blue-600 dark:border-blue-400 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white dark:text-black font-semibold font-mono text-xs uppercase tracking-[0.12em] px-8 py-3.5 transition-colors shadow-sm disabled:opacity-50"
+              className="inline-flex items-center gap-2 border border-foreground bg-primary hover:bg-blue-600 text-white font-semibold font-mono text-xs uppercase tracking-[0.12em] px-8 py-3.5 transition-colors shadow-[2px_2px_0px_0px_currentColor] disabled:opacity-50"
             >
-              Publish Event to Radar &rarr;
+              Submit Event for Approval &rarr;
             </button>
           </div>
         )}
 
         {err && (
-          <div className="border border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 p-4 text-amber-700 dark:text-amber-400 font-mono text-xs">
+          <div className="border border-amber-500/50 bg-amber-500/10 p-4 text-amber-700 dark:text-amber-300 font-mono text-xs">
             {err}
           </div>
         )}

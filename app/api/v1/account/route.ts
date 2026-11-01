@@ -115,14 +115,29 @@ export async function PATCH(req: Request) {
   }
 }
 
+/**
+ * DELETE /api/v1/account
+ * Deletes the authenticated user and all dependent records (registrations,
+ * team memberships, organizer memberships, sessions, accounts) inside a transaction
+ * so deletion succeeds cleanly even if legacy databases had RESTRICT foreign keys.
+ */
 export async function DELETE() {
   try {
     const sessionUser = await requireUser();
     const rl = await checkRateLimit(`account:delete:${sessionUser.id}`, 3, 60_000);
     if (!rl.allowed) return rateLimitResponse(rl);
 
-    await prisma.user.delete({
-      where: { id: sessionUser.id },
+    await prisma.$transaction(async (tx) => {
+      await tx.registration.deleteMany({ where: { userId: sessionUser.id } });
+      await tx.teamMember.deleteMany({ where: { userId: sessionUser.id } });
+      await tx.team.updateMany({
+        where: { leaderId: sessionUser.id },
+        data: { leaderId: null },
+      });
+      await tx.organizerMember.deleteMany({ where: { userId: sessionUser.id } });
+      await tx.session.deleteMany({ where: { userId: sessionUser.id } });
+      await tx.account.deleteMany({ where: { userId: sessionUser.id } });
+      await tx.user.delete({ where: { id: sessionUser.id } });
     });
 
     const res = NextResponse.json({
@@ -132,8 +147,6 @@ export async function DELETE() {
 
     res.cookies.delete("authjs.session-token");
     res.cookies.delete("__Secure-authjs.session-token");
-    res.cookies.delete("eventr_auth");
-    res.cookies.delete("eventer_auth");
     return res;
   } catch (err) {
     const authRes = authzResponse(err);
@@ -141,4 +154,3 @@ export async function DELETE() {
     return apiError("Failed to delete account.", 500, err);
   }
 }
-

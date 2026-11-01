@@ -36,9 +36,10 @@ const serverEnvSchema = z.object({
     .string()
     .min(1, "GEMINI_MODEL is required when calling Gemini")
     .refine((m) => !m.includes("1.5-flash"), {
-      message: "gemini-1.5-flash is retired; configure a supported model such as gemini-3.8-flash or gemini-2.5-flash",
+      message:
+        "gemini-1.5-flash is retired; configure a supported model such as gemini-2.5-flash",
     })
-    .default("gemini-3.8-flash"),
+    .default("gemini-2.5-flash"),
   UPSTASH_REDIS_REST_URL: z.string().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
@@ -60,14 +61,11 @@ export function validateEnv(rawEnv: NodeJS.ProcessEnv = process.env): Env {
         : "postgresql://localhost:5432/eventr"),
     AUTH_SECRET: rawEnv.AUTH_SECRET || rawEnv.NEXTAUTH_SECRET || undefined,
     AUTH_GOOGLE_ID: rawEnv.AUTH_GOOGLE_ID || rawEnv.GOOGLE_CLIENT_ID || undefined,
-    AUTH_GOOGLE_SECRET: rawEnv.AUTH_GOOGLE_SECRET || rawEnv.GOOGLE_CLIENT_SECRET || undefined,
-    GEMINI_MODEL:
-      rawEnv.GEMINI_MODEL && !rawEnv.GEMINI_MODEL.includes("1.5-flash")
-        ? rawEnv.GEMINI_MODEL
-        : "gemini-3.8-flash",
+    AUTH_GOOGLE_SECRET:
+      rawEnv.AUTH_GOOGLE_SECRET || rawEnv.GOOGLE_CLIENT_SECRET || undefined,
+    GEMINI_MODEL: rawEnv.GEMINI_MODEL || "gemini-2.5-flash",
   };
 
-  // Strip empty strings so optional defaults apply cleanly
   for (const [k, v] of Object.entries(normalized)) {
     if (v === "") {
       normalized[k] = undefined;
@@ -83,17 +81,34 @@ export function validateEnv(rawEnv: NodeJS.ProcessEnv = process.env): Env {
   }
 
   if (parsed.data.NODE_ENV === "production") {
-    const missingProd: string[] = [];
-    if (!rawEnv.AUTH_SECRET && !rawEnv.NEXTAUTH_SECRET) missingProd.push("AUTH_SECRET");
-    if (!rawEnv.TICKET_SIGNING_SECRET) missingProd.push("TICKET_SIGNING_SECRET");
-    if (!rawEnv.PII_ENCRYPTION_KEY) missingProd.push("PII_ENCRYPTION_KEY");
-    if (!rawEnv.CRON_SECRET) missingProd.push("CRON_SECRET");
-    // Only enforce hard secret errors at runtime (not during `next build` static analysis if NEXT_PHASE is build)
-    const isBuildPhase = rawEnv.NEXT_PHASE === "phase-production-build";
-    if (!isBuildPhase && missingProd.length > 0) {
+    // Never allow AUTH_TEST_TRANSPORT in production (even during build)
+    if (parsed.data.AUTH_TEST_TRANSPORT || rawEnv.AUTH_TEST_TRANSPORT === "true") {
       throw new Error(
-        `Missing required production secrets: ${missingProd.join(", ")}`
+        "AUTH_TEST_TRANSPORT=true is forbidden when NODE_ENV=production. Magic-link tokens must never be written to disk in production."
       );
+    }
+
+    const isBuildPhase = rawEnv.NEXT_PHASE === "phase-production-build";
+    if (!isBuildPhase) {
+      const missingProd: string[] = [];
+      if (!rawEnv.AUTH_SECRET && !rawEnv.NEXTAUTH_SECRET)
+        missingProd.push("AUTH_SECRET");
+      if (!rawEnv.TICKET_SIGNING_SECRET)
+        missingProd.push("TICKET_SIGNING_SECRET");
+      if (!rawEnv.PII_ENCRYPTION_KEY) missingProd.push("PII_ENCRYPTION_KEY");
+      if (!rawEnv.CRON_SECRET) missingProd.push("CRON_SECRET");
+
+      if (missingProd.length > 0) {
+        throw new Error(
+          `Missing required production secrets: ${missingProd.join(", ")}`
+        );
+      }
+
+      if (!rawEnv.UPSTASH_REDIS_REST_URL || !rawEnv.UPSTASH_REDIS_REST_TOKEN) {
+        console.warn(
+          "[Eventr Security Warning] UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are not configured in production! Rate limiting is falling back to per-instance memory, which does not synchronize across serverless instances."
+        );
+      }
     }
   }
 
@@ -101,4 +116,3 @@ export function validateEnv(rawEnv: NodeJS.ProcessEnv = process.env): Env {
 }
 
 export const env: Env = validateEnv(process.env);
-

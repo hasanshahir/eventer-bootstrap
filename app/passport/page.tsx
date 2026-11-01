@@ -44,7 +44,7 @@ export default function PassportPage() {
         if (accData?.profile) setUser(accData.profile);
         setRegs(regData.registrations ?? []);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
 
@@ -59,10 +59,10 @@ export default function PassportPage() {
 
   const hash = user?.email
     ? Array.from(user.email)
-        .reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7)
-        .toString(16)
-        .toUpperCase()
-        .slice(0, 6)
+      .reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7)
+      .toString(16)
+      .toUpperCase()
+      .slice(0, 6)
     : "AUTH";
 
   return (

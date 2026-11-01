@@ -115,10 +115,10 @@ export function toCard(e: RawEventLike): EventCard {
     (url.includes("devpost.com")
       ? "devpost"
       : url.includes("gdg.community.dev")
-      ? "gdg"
-      : url.includes("lu.ma")
-      ? "luma"
-      : "campus");
+        ? "gdg"
+        : url.includes("lu.ma")
+          ? "luma"
+          : "campus");
 
   // Clean description removing the appended URL metadata
   const cleanDescription = rawDesc

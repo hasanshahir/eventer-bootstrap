@@ -58,9 +58,7 @@ export default async function RootLayout({
                   document.documentElement.classList.remove('dark');
                   document.documentElement.setAttribute('data-theme', 'light');
                 }
-                // One-time cleanup of legacy unsigned identity keys
                 localStorage.removeItem('eventr_user');
-                localStorage.removeItem('eventer_user');
               } catch (_) {
                 document.documentElement.classList.add('dark');
                 document.documentElement.setAttribute('data-theme', 'dark');
