@@ -44,6 +44,11 @@ export default function Feed({ events }: { events: EventCard[] }) {
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [gpsStatus, setGpsStatus] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(12);
+
+  useEffect(() => {
+    setVisibleCount(12);
+  }, [scope, city, type, q, showSavedOnly]);
 
   useEffect(() => {
     setFeedEvents(events);
@@ -733,7 +738,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
 
             <div className="flex items-center gap-3">
               <p className="font-mono text-xs text-muted-foreground">
-                Showing {shown.length} of {feedEvents.length} dispatches (
+                Showing {Math.min(visibleCount, shown.length)} of {shown.length} dispatches (
                 {openEventsCount} open &bull; {archivedEventsCount} archived)
               </p>
             </div>
@@ -944,7 +949,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
 
         {/* Spacious, Distinct Event Cards Grid */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-8">
-          {shown.map((e, index) => {
+          {shown.slice(0, visibleCount).map((e, index) => {
             const padIndex = String(index + 1).padStart(2, "0");
             const isSaved = bookmarks.includes(e.id);
             const isGlobalEvent =
@@ -1188,6 +1193,21 @@ export default function Feed({ events }: { events: EventCard[] }) {
             );
           })}
         </div>
+
+        {shown.length > visibleCount && (
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 border-t border-foreground/20 pt-8">
+            <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
+              Showing {Math.min(visibleCount, shown.length)} of {shown.length} dispatches
+            </p>
+            <button
+              type="button"
+              onClick={() => setVisibleCount((prev) => prev + 12)}
+              className="inline-flex items-center gap-2 border-2 border-foreground bg-primary px-8 py-3 font-mono text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-[2px_2px_0px_0px_currentColor] transition-transform hover:-translate-y-0.5 active:translate-y-0"
+            >
+              Load More Dispatches ({shown.length - visibleCount} remaining)
+            </button>
+          </div>
+        )}
 
         {shown.length === 0 && (
           <div className="border-2 border-foreground/30 bg-card p-16 text-center mt-8 shadow-[2px_2px_0px_0px_currentColor]">
