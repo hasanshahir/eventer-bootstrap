@@ -1,11 +1,5 @@
-import { NextResponse } from "next/server";
+import { handlers } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  return NextResponse.redirect("/login");
-}
-
-export async function POST() {
-  return NextResponse.redirect("/login");
-}
+export const { GET, POST } = handlers;

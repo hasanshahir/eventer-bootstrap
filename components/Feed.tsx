@@ -4,9 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import MatchBadge from "./MatchBadge";
-import RsvpButton from "./RsvpButton";
 import { STACK_OPTIONS } from "@/lib/match";
-import { demoUser } from "@/lib/demoUser";
 import { fmtDate, isRegistrationClosed, type EventCard } from "@/lib/ev";
 
 const CITY_DOSSIERS: Record<string, { latLng: string; subtitle: string; tags: string[]; desc: string }> = {
@@ -160,9 +158,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
       if (s) setStack(JSON.parse(s));
       const b = localStorage.getItem("eventr_bookmarks") || localStorage.getItem("eventer_bookmarks");
       if (b) setBookmarks(JSON.parse(b));
-      if (!localStorage.getItem("eventr_user") && !localStorage.getItem("eventer_user")) {
-        localStorage.setItem("eventr_user", JSON.stringify(demoUser));
-      }
+      localStorage.removeItem("eventr_user"); localStorage.removeItem("eventer_user");
     } catch {}
   }, []);
 
@@ -173,7 +169,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
     if (s) {
       const upper = s.toUpperCase();
       if (upper === "PAKISTAN" || upper === "GLOBAL" || upper === "ALL") {
-        setScope(upper as any);
+        setScope(upper);
       }
     }
     if (c) {

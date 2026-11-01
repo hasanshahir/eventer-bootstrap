@@ -1,0 +1,97 @@
+name: Eventr CI & Quality Gate
+
+on:
+  push:
+    branches: [main, develop, "chore/**", "feat/**", "fix/**"]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  ci:
+    name: Lint, Typecheck, Test, Audit & E2E
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: eventr_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/eventr_test
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/eventr_test
+      AUTH_SECRET: ci-test-auth-secret-minimum-32-characters-long
+      AUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      AUTH_TEST_TRANSPORT: "true"
+      ADMIN_EMAIL: admin@eventr.pk
+      ADMIN_NAME: Eventr CI Admin
+      TICKET_SIGNING_SECRET: ci-test-ticket-signing-secret-minimum-32-chars
+      PII_ENCRYPTION_KEY: ci-test-pii-encryption-key-minimum-32-chars-00
+      CRON_SECRET: ci-test-cron-secret-minimum-32-characters-long
+      GEMINI_MODEL: gemini-3.8-flash
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Security Audit (High / Critical gate)
+        run: npm audit --audit-level=high
+
+      - name: Validate Prisma schema & apply migrations
+        run: |
+          npx prisma validate
+          npx prisma migrate deploy
+
+      - name: Seed test database
+        run: npm run db:seed
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript typecheck
+        run: npm run typecheck
+
+      - name: Run Unit & Integration tests
+        run: npm test
+
+      - name: Build production bundle
+        env:
+          NODE_ENV: production
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright E2E & Axe Accessibility tests
+        run: npm run test:e2e
+
+      - name: Run Lighthouse CI budgets
+        run: npx @lhci/cli@0.14.x autorun
+

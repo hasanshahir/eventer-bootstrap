@@ -2,12 +2,29 @@
 import { useEffect, useState, useRef } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 
+interface ScanCheckinResult {
+  ok?: boolean;
+  error?: string;
+  alreadyCheckedIn?: boolean;
+  checkedInAt?: string;
+  attendee?: {
+    name?: string | null;
+    fullName?: string | null;
+    university?: string | null;
+    email?: string | null;
+  };
+  event?: {
+    id?: string;
+    title?: string;
+  };
+}
+
 export default function ScanPage() {
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<ScanCheckinResult | null>(null);
   const [err, setErr] = useState("");
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<ScanCheckinResult[]>([]);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
   useEffect(() => {
@@ -49,7 +66,7 @@ export default function ScanPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ticketToken: t }),
       });
-      const data = await res.json();
+      const data = (await res.json()) as ScanCheckinResult;
       if (res.ok) {
         setResult(data);
         setHistory((prev) => [data, ...prev.slice(0, 9)]);
@@ -127,10 +144,10 @@ export default function ScanPage() {
                 ✓ CHECK-IN CONFIRMED
               </span>
               <h3 className="text-2xl sm:text-3xl font-bold text-white">
-                {result.attendee?.fullName || "Attendee"}
+                {result.attendee?.name || result.attendee?.fullName || "Attendee"}
               </h3>
               <p className="font-mono text-xs text-slate-600 dark:text-zinc-300">
-                {result.attendee?.university || "University Student"} &bull; {result.attendee?.email}
+                {result.attendee?.university || "University Student"}
               </p>
               <p className="font-mono text-[11px] text-blue-700 dark:text-blue-400 pt-2 border-t border-blue-500/20 font-semibold">
                 Event: {result.event?.title}
@@ -146,7 +163,7 @@ export default function ScanPage() {
               <p className="text-lg font-bold text-white">{err}</p>
               {result?.alreadyCheckedIn && (
                 <p className="font-mono text-xs text-slate-600 dark:text-zinc-400">
-                  Attendee: {result.attendee?.fullName} ({result.attendee?.email})
+                  Attendee: {result.attendee?.name || result.attendee?.fullName}
                 </p>
               )}
             </div>
@@ -172,8 +189,12 @@ export default function ScanPage() {
                 {history.map((h, i) => (
                   <div key={i} className="py-3 flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-slate-800 dark:text-zinc-200">{h.attendee?.fullName}</p>
-                      <p className="text-[10px] text-slate-500 dark:text-zinc-500">{h.attendee?.university}</p>
+                      <p className="font-semibold text-slate-800 dark:text-zinc-200">
+                        {h.attendee?.name || h.attendee?.fullName}
+                      </p>
+                      <p className="text-[10px] text-slate-500 dark:text-zinc-500">
+                        {h.attendee?.university}
+                      </p>
                     </div>
                     <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">✓ In Gate</span>
                   </div>

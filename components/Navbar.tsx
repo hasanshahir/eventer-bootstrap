@@ -1,50 +1,65 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
 
-export default function Navbar() {
+export interface NavbarUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  city?: string | null;
+}
+
+function getInitials(name?: string, email?: string): string {
+  const source = (name || email || "U").trim();
+  const parts = source.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return source.slice(0, 2).toUpperCase();
+}
+
+export default function Navbar({
+  initialUser,
+}: {
+  initialUser: NavbarUser | null;
+}) {
   const pathname = usePathname();
-  const [user, setUser] = useState<{ name?: string; email?: string; image?: string } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const [user, setUser] = useState<NavbarUser | null>(initialUser);
+  const [signingOut, setSigningOut] = useState(false);
 
-  useEffect(() => {
-    // 1. Instant check from localStorage (never fails, zero network latency)
+  async function handleSignOut() {
+    setSigningOut(true);
     try {
-      const saved = localStorage.getItem("eventr_user") || localStorage.getItem("eventer_user");
-      if (saved) {
-        setUser(JSON.parse(saved));
-      }
-    } catch {}
-    setLoading(false);
-
-    // 2. Background check with cookie session
-    fetch("/api/auth/me")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.user) {
-          setUser(data.user);
-          try {
-            localStorage.setItem("eventr_user", JSON.stringify(data.user));
-          } catch {}
-        }
-      })
-      .catch(() => {});
-  }, [pathname]);
-
-  function handleSignOut() {
-    try {
-      localStorage.removeItem("eventr_user");
-      localStorage.removeItem("eventer_user");
+      const csrfRes = await fetch("/api/auth/csrf");
+      const csrfData = (await csrfRes.json()) as { csrfToken?: string };
+      await fetch("/api/auth/signout", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          csrfToken: csrfData.csrfToken || "",
+          callbackUrl: "/",
+          json: "true",
+        }),
+      });
     } catch {}
     setUser(null);
-    fetch("/api/auth/logout").catch(() => {});
+    setSigningOut(false);
+    router.push("/");
+    router.refresh();
   }
 
   const isRadar = pathname === "/" || pathname === "/events";
-  const isCities = pathname === "/cities";
+  const isCities = pathname.startsWith("/cities");
+  const isPassport = pathname.startsWith("/passport");
+  const now = new Date();
+  const issueLabel = `Issue ${String(now.getMonth() + 1).padStart(2, "0")}.${String(
+    now.getFullYear()
+  ).slice(-2)} / Live edition`;
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-foreground/30 bg-background/90 backdrop-blur-md transition-colors duration-200">
@@ -69,12 +84,12 @@ export default function Navbar() {
 
         {/* Central Dispatch Marker */}
         <div className="hidden items-center border-x border-foreground/30 px-7 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground lg:flex">
-          Issue 08.26 &nbsp;/&nbsp; Live edition
+          {issueLabel}
         </div>
 
         {/* Navigation & Controls */}
         <div className="flex items-center justify-end gap-2 sm:gap-3 pl-3 lg:pl-6">
-          <nav className="flex items-center gap-2 sm:gap-4" aria-label="Primary">
+          <nav className="flex items-center gap-2 sm:gap-3" aria-label="Primary">
             <Link
               href="/"
               className={`flex min-h-11 items-center px-1 text-xs font-semibold uppercase tracking-[0.12em] transition-colors ${
@@ -95,44 +110,44 @@ export default function Navbar() {
             >
               Cities
             </Link>
+            {user && (
+              <Link
+                href="/passport"
+                className={`hidden sm:flex min-h-11 items-center px-1 text-xs font-semibold uppercase tracking-[0.12em] transition-colors ${
+                  isPassport
+                    ? "text-primary font-bold underline decoration-2 underline-offset-4"
+                    : "text-foreground hover:text-primary"
+                }`}
+              >
+                Passport
+              </Link>
+            )}
 
-            {/* Dark / Light Mode Toggle */}
             <ThemeToggle />
 
-            {/* Authentication Control: Exactly ONE Button when logged out */}
-            {loading ? (
-              <div className="h-10 px-3 border border-foreground/30 flex items-center font-mono text-[10px] text-muted-foreground">
-                …
-              </div>
-            ) : user ? (
+            {user ? (
               <div className="flex items-center gap-2">
                 <Link
-                  href="/login"
+                  href="/account"
                   title={`Signed in as ${user.name || user.email}`}
+                  aria-label="Open account settings"
                   className="flex items-center gap-2 h-10 border border-foreground/30 bg-card px-2.5 shadow-[1px_1px_0px_0px_currentColor] hover:border-primary transition-colors"
                 >
-                  {user.image ? (
-                    <img
-                      src={user.image}
-                      alt={user.name || "User"}
-                      className="size-5 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="size-5 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
-                      {(user.name || user.email || "U")[0].toUpperCase()}
-                    </div>
-                  )}
+                  <div className="size-6 rounded-full bg-primary text-white font-mono text-[10px] font-bold flex items-center justify-center">
+                    {getInitials(user.name, user.email)}
+                  </div>
                   <span className="font-mono text-xs hidden md:inline truncate max-w-[100px] text-foreground">
-                    {user.name?.split(" ")[0] || user.email?.split("@")[0]}
+                    {user.name.split(" ")[0] || user.email.split("@")[0]}
                   </span>
                 </Link>
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="h-10 border border-foreground/30 bg-background px-2.5 font-mono text-[10px] uppercase text-muted-foreground hover:text-foreground hover:border-foreground flex items-center transition-colors shadow-[1px_1px_0px_0px_currentColor]"
-                  title="Sign out"
+                  disabled={signingOut}
+                  aria-label="Sign out"
+                  className="h-10 border border-foreground/30 bg-background px-2.5 font-mono text-[10px] uppercase text-muted-foreground hover:text-foreground hover:border-foreground flex items-center transition-colors shadow-[1px_1px_0px_0px_currentColor] disabled:opacity-50"
                 >
-                  Exit
+                  {signingOut ? "…" : "Exit"}
                 </button>
               </div>
             ) : (
@@ -140,14 +155,13 @@ export default function Navbar() {
                 href="/login"
                 className="inline-flex items-center h-10 border border-foreground bg-primary px-4 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-white hover:bg-blue-600 transition-all shadow-[2px_2px_0px_0px_currentColor] active:translate-x-0.5 active:translate-y-0.5"
               >
-                Login
+                Sign In
               </Link>
             )}
 
-            {/* Submit Event CTA */}
             <Link
               href="/organizer/new"
-              className="inline-flex shrink-0 items-center justify-center gap-1.5 h-10 border border-foreground bg-primary px-3.5 sm:px-4 text-[11px] font-semibold uppercase tracking-[0.1em] text-white hover:bg-blue-600 transition-colors shadow-[2px_2px_0px_0px_currentColor] active:translate-x-0.5 active:translate-y-0.5"
+              className="hidden sm:inline-flex shrink-0 items-center justify-center gap-1.5 h-10 border border-foreground bg-primary px-3.5 sm:px-4 text-[11px] font-semibold uppercase tracking-[0.1em] text-white hover:bg-blue-600 transition-colors shadow-[2px_2px_0px_0px_currentColor] active:translate-x-0.5 active:translate-y-0.5"
             >
               <span>Submit</span>
               <svg
@@ -157,6 +171,7 @@ export default function Navbar() {
                 fill="currentColor"
                 viewBox="0 0 256 256"
                 className="size-3.5"
+                aria-hidden="true"
               >
                 <path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z" />
               </svg>

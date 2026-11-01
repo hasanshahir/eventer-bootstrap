@@ -1,19 +1,49 @@
-import type { Metadata } from 'next';
-import Navbar from '@/components/Navbar';
-import './globals.css';
+import type { Metadata } from "next";
+import Link from "next/link";
+import Navbar from "@/components/Navbar";
+import { auth } from "@/lib/auth";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'Eventr — Pakistan’s Developer & Tech Event Hub',
-  description: 'Every hackathon, developer conference, workshop, and meetup across Pakistan. Curated by city, sorted by registration deadlines.',
+  title: "Eventr — Pakistan’s Developer & Tech Event Hub",
+  description:
+    "Every hackathon, developer conference, workshop, and meetup across Pakistan. Curated by city, sorted by registration deadlines.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  let sessionUser: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    city?: string | null;
+  } | null = null;
+
+  try {
+    const session = await auth();
+    if (session?.user?.id && session.user.email) {
+      sessionUser = {
+        id: session.user.id,
+        name: session.user.name || session.user.email.split("@")[0],
+        email: session.user.email,
+        role: session.user.role || "USER",
+        city: session.user.city ?? null,
+      };
+    }
+  } catch {
+    sessionUser = null;
+  }
+
   return (
-    <html lang="en" className="h-full antialiased scroll-smooth" suppressHydrationWarning>
+    <html
+      lang="en"
+      className="h-full antialiased scroll-smooth"
+      suppressHydrationWarning
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -28,6 +58,9 @@ export default function RootLayout({
                   document.documentElement.classList.remove('dark');
                   document.documentElement.setAttribute('data-theme', 'light');
                 }
+                // One-time cleanup of legacy unsigned identity keys
+                localStorage.removeItem('eventr_user');
+                localStorage.removeItem('eventer_user');
               } catch (_) {
                 document.documentElement.classList.add('dark');
                 document.documentElement.setAttribute('data-theme', 'dark');
@@ -37,9 +70,16 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-200 selection:bg-primary selection:text-white">
-        <Navbar />
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:border-2 focus:border-foreground focus:bg-primary focus:px-4 focus:py-2 focus:font-mono focus:text-xs focus:font-bold focus:uppercase focus:text-white"
+        >
+          Skip to main content
+        </a>
 
-        <div className="flex-1">
+        <Navbar initialUser={sessionUser} />
+
+        <div id="main-content" className="flex-1">
           {children}
         </div>
 
@@ -49,7 +89,15 @@ export default function RootLayout({
               <span className="size-2 rounded-full bg-primary animate-pulse" />
               Eventr Pakistan &bull; National Tech Signal
             </span>
-            <span>All rights reserved &bull; 2026</span>
+            <div className="flex items-center gap-4">
+              <Link href="/privacy" className="hover:text-primary underline-offset-4 hover:underline">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="hover:text-primary underline-offset-4 hover:underline">
+                Terms
+              </Link>
+              <span>All rights reserved &bull; 2026</span>
+            </div>
           </div>
         </footer>
       </body>

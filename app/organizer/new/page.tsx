@@ -5,6 +5,20 @@ import { useRouter } from "next/navigation";
 const inp =
   "w-full bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 px-4 py-2.5 text-sm text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-600 focus:border-blue-600 dark:focus:border-blue-500 outline-none font-mono shadow-sm transition-colors";
 
+interface ExtractedEventForm {
+  title?: string;
+  organizer?: string;
+  city?: string;
+  venue?: string;
+  startsAt?: string;
+  endsAt?: string;
+  type?: string;
+  description?: string;
+  tags?: string[];
+  tagsStr: string;
+  [key: string]: string | string[] | undefined;
+}
+
 export default function NewEventPage() {
   const router = useRouter();
   const [tab, setTab] = useState<"text" | "flyer">("text");
@@ -13,7 +27,7 @@ export default function NewEventPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [source, setSource] = useState("");
-  const [ev, setEv] = useState<any>(null);
+  const [ev, setEv] = useState<ExtractedEventForm | null>(null);
 
   function onFile(f?: File) {
     if (!f) return;
@@ -39,9 +53,27 @@ export default function NewEventPage() {
           mimeType: img?.mime,
         }),
       });
-      const d = await res.json();
-      setSource(d.source);
-      setEv({ ...d.event, tagsStr: (d.event.tags ?? []).join(", ") });
+      const d = (await res.json()) as {
+        source?: string;
+        error?: string;
+        event?: {
+          title?: string;
+          organizer?: string;
+          city?: string;
+          venue?: string;
+          startsAt?: string;
+          endsAt?: string;
+          type?: string;
+          description?: string;
+          tags?: string[];
+        };
+      };
+      if (!res.ok || !d.event) {
+        setErr(d.error || "Parse failed. Please fill the form manually.");
+      } else {
+        setSource(d.source ?? "gemini-flash");
+        setEv({ ...d.event, tagsStr: (d.event.tags ?? []).join(", ") });
+      }
     } catch {
       setErr("Parse failed. Please try again.");
     }
@@ -49,6 +81,7 @@ export default function NewEventPage() {
   }
 
   async function publish() {
+    if (!ev) return;
     setBusy(true);
     setErr("");
     const { tagsStr, ...rest } = ev;
@@ -63,7 +96,7 @@ export default function NewEventPage() {
           .filter(Boolean),
       }),
     });
-    const d = await res.json();
+    const d = (await res.json()) as { ok?: boolean; error?: string };
     if (d.ok) {
       router.push("/");
     } else {
@@ -72,7 +105,10 @@ export default function NewEventPage() {
     }
   }
 
-  const set = (k: string) => (e: any) => setEv({ ...ev, [k]: e.target.value });
+  const set =
+    (k: string) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setEv((prev) => (prev ? { ...prev, [k]: e.target.value } : null));
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-zinc-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white dark:selection:bg-blue-500 dark:selection:text-black transition-colors">
@@ -163,7 +199,7 @@ export default function NewEventPage() {
                     <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-600 dark:text-zinc-400 block mb-1.5 font-semibold">
                       {k}
                     </span>
-                    <input className={inp} value={ev[k] ?? ""} onChange={set(k)} />
+                    <input className={inp} value={String(ev[k] ?? "")} onChange={set(k)} />
                   </label>
                 )
               )}

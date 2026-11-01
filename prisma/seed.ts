@@ -1,28 +1,79 @@
 import { prisma } from "../lib/prisma";
+import { env } from "../lib/env";
 import { discoverAllEvents, syncDiscoveredEventsToPrisma } from "../lib/discover-events";
+import { migratePhoneFromRollNumber } from "../scripts/migrate-phone-rollnumber";
 
 async function main() {
-  console.log("Cleaning up old mock and fake events...");
+  // 1. Run S-13 PII data migration (move any phone numbers out of User.rollNumber)
   try {
-    await prisma.event.deleteMany({
-      where: {
-        OR: [
-          { id: { in: ["event_ned_techfest_2026", "event_gdg_kolachi_2026", "event_softec_2026", "event_nust_codesprint_2026"] } },
-          { description: { contains: "https://lu.ma\n" } },
-          { description: { endsWith: "https://lu.ma" } },
-          { description: { contains: "https://luma.com/home" } },
-        ],
-      },
-    });
+    const migrationResult = await migratePhoneFromRollNumber();
+    if (migrationResult.migrated > 0) {
+      console.log(
+        `Migrated ${migrationResult.migrated} phone number(s) from User.rollNumber to User.phoneEncrypted.`
+      );
+    }
   } catch (err) {
-    console.warn("Delete old mocks notice:", err);
+    console.warn("Phone migration notice:", err);
   }
 
-  console.log("Triggering live multi-source radar discovery (Devpost, GDG, Luma, Unstop)...");
+  // 2. Seed initial ADMIN account from ADMIN_EMAIL env variable
+  const adminEmail = (process.env.ADMIN_EMAIL || env.ADMIN_EMAIL || "").trim().toLowerCase();
+  const adminName = (process.env.ADMIN_NAME || env.ADMIN_NAME || "Eventr Admin").trim();
+
+  if (adminEmail) {
+    const adminUser = await prisma.user.upsert({
+      where: { email: adminEmail },
+      update: {
+        role: "ADMIN",
+        name: adminName,
+        fullName: adminName,
+      },
+      create: {
+        email: adminEmail,
+        name: adminName,
+        fullName: adminName,
+        role: "ADMIN",
+        city: "Karachi",
+      },
+    });
+
+    // Ensure admin has a verified Organizer + OrganizerMember record
+    const org = await prisma.organizer.upsert({
+      where: { slug: "eventr-official" },
+      update: {
+        name: "Eventr Official Desk",
+        verified: true,
+      },
+      create: {
+        name: "Eventr Official Desk",
+        slug: "eventr-official",
+        verified: true,
+      },
+    });
+
+    await prisma.organizerMember.upsert({
+      where: {
+        userId_organizerId: {
+          userId: adminUser.id,
+          organizerId: org.id,
+        },
+      },
+      update: { role: "OWNER" },
+      create: {
+        userId: adminUser.id,
+        organizerId: org.id,
+        role: "OWNER",
+      },
+    });
+
+    console.log(`Seeded ADMIN user: ${adminUser.email} (${adminUser.id})`);
+  }
+
+  // 3. Seed initial events
+  console.log("Syncing events into database...");
   const data = await discoverAllEvents(true);
   await syncDiscoveredEventsToPrisma(data.events);
-
-  console.log(`Successfully synced ${data.events.length} real upcoming events into Neon database.`);
+  console.log(`Seeded ${data.events.length} events.`);
 }
 
 main()

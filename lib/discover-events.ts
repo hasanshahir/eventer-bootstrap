@@ -682,8 +682,17 @@ export async function fetchDevpostHackathons(): Promise<DiscoveredEvent[]> {
     const hackathons = data.hackathons || [];
     const JAN_1_2026_MS = new Date("2026-01-01T00:00:00.000Z").getTime();
 
-    return hackathons
-      .filter((h: any) => {
+    interface RawDevpostHackathon {
+      id?: string | number;
+      url: string;
+      title?: string;
+      submission_period_dates?: string;
+      themes?: { name: string }[];
+      organization_name?: string;
+    }
+
+    return (hackathons as RawDevpostHackathon[])
+      .filter((h) => {
         if (!isValidRegistrationUrl(h.url)) return false;
         
         // Exclude older years (2022, 2023, 2024, 2025)
@@ -697,14 +706,15 @@ export async function fetchDevpostHackathons(): Promise<DiscoveredEvent[]> {
         }
         return true;
       })
-      .map((h: any) => {
-        const themes = Array.isArray(h.themes) ? h.themes.map((t: any) => t.name) : [];
-        const tags = Array.from(new Set(["Virtual", "Hackathon", ...themes, ...deriveTags(h.title, "")])).slice(0, 5);
+      .map((h) => {
+        const title = h.title || "Global Hackathon";
+        const themes = Array.isArray(h.themes) ? h.themes.map((t) => t.name) : [];
+        const tags = Array.from(new Set(["Virtual", "Hackathon", ...themes, ...deriveTags(title, "")])).slice(0, 5);
 
         return {
           id: `devpost_${h.id || Math.abs(hashCode(h.url))}`,
-          title: h.title,
-          description: `${h.title} — Global virtual online hackathon open to developers in Pakistan and worldwide.`,
+          title,
+          description: `${title} — Global virtual online hackathon open to developers in Pakistan and worldwide.`,
           city: "Global • Virtual",
           venue: "Online (Devpost)",
           category: "HACKATHON" as const,
@@ -742,8 +752,23 @@ export async function fetchGdgPakistanEvents(): Promise<DiscoveredEvent[]> {
     const pkCities = ["karachi", "lahore", "islamabad", "peshawar", "faisalabad", "rawalpindi", "multan", "quetta", "hyderabad", "sukkur"];
     const pkCampuses = [/\bned\b/i, /\bfast\b/i, /\bnust\b/i, /\bgiki\b/i, /\biba\b/i, /\bcomsats\b/i, /\bpucit\b/i, /\bhabib\b/i, /\buet\b/i];
 
-    return results
-      .filter((ev: any) => {
+    interface RawGdgEvent {
+      id?: string | number;
+      url: string;
+      title?: string;
+      start_date?: string;
+      end_date?: string;
+      chapter?: {
+        country?: string;
+        country_name?: string;
+        city?: string;
+        chapter_location?: string;
+        title?: string;
+      };
+    }
+
+    return (results as RawGdgEvent[])
+      .filter((ev) => {
         if (!isValidRegistrationUrl(ev.url)) return false;
         
         // Strict 2026 filter
@@ -761,7 +786,7 @@ export async function fetchGdgPakistanEvents(): Promise<DiscoveredEvent[]> {
         const campusMatch = pkCampuses.some((rx) => rx.test(loc));
         return cityMatch || campusMatch;
       })
-      .map((ev: any) => {
+      .map((ev) => {
         const title = ev.title || "GDG Community Gathering";
         const rawCity = ev.chapter?.city || "Lahore";
         const city = normalizeCityName(rawCity);
@@ -930,11 +955,6 @@ export async function discoverAllEvents(bypassCache = false): Promise<{
     timestamp: Date.now(),
   };
 
-  // Sync to Neon DB asynchronously
-  syncDiscoveredEventsToPrisma(uniqueEvents).catch((err) => {
-    console.error("Async Prisma sync error:", err);
-  });
-
   const devpost = uniqueEvents.filter((e) => e.source === "devpost").length;
   const gdg = uniqueEvents.filter((e) => e.source === "gdg").length;
   const luma = uniqueEvents.filter((e) => e.source === "luma").length;
@@ -949,7 +969,7 @@ export async function discoverAllEvents(bypassCache = false): Promise<{
 // Sync to PostgreSQL with Prisma
 export async function syncDiscoveredEventsToPrisma(events: DiscoveredEvent[]) {
   try {
-    const organizer = await (prisma as any).organizer.upsert({
+    const organizer = await prisma.organizer.upsert({
       where: { id: "org_radar_scanner" },
       update: { name: "Eventr Autonomous Radar" },
       create: {
@@ -960,7 +980,7 @@ export async function syncDiscoveredEventsToPrisma(events: DiscoveredEvent[]) {
 
     // Delete any old generic mock records and pre-2026 dates
     try {
-      await (prisma as any).event.deleteMany({
+      await prisma.event.deleteMany({
         where: {
           OR: [
             { startTime: { lt: new Date("2026-01-01T00:00:00.000Z") } },
@@ -982,8 +1002,9 @@ export async function syncDiscoveredEventsToPrisma(events: DiscoveredEvent[]) {
       const startTime = ev.startsAt ? new Date(ev.startsAt) : new Date(Date.now() + 7 * 86400 * 1000);
       const endTime = ev.endsAt ? new Date(ev.endsAt) : new Date(startTime.getTime() + 48 * 3600 * 1000);
       const fullDescription = `${ev.description}\n\nOfficial Registration: ${ev.registrationUrl}`;
+      const slug = `${ev.id.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
-      await (prisma as any).event.upsert({
+      await prisma.event.upsert({
         where: { id: ev.id },
         update: {
           title: ev.title,
@@ -996,6 +1017,7 @@ export async function syncDiscoveredEventsToPrisma(events: DiscoveredEvent[]) {
         },
         create: {
           id: ev.id,
+          slug,
           title: ev.title,
           description: fullDescription,
           city: ev.city,

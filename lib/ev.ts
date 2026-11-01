@@ -17,11 +17,39 @@ export type EventCard = {
   scope?: "pakistan" | "global";
 };
 
-export function resolveEventUrl(e: any): string {
+export interface RawEventLike {
+  id?: string | number | null;
+  title?: string | null;
+  description?: string | null;
+  city?: string | null;
+  venue?: string | null;
+  type?: string | null;
+  category?: string | null;
+  startTime?: Date | string | null;
+  startsAt?: Date | string | null;
+  endTime?: Date | string | null;
+  endsAt?: Date | string | null;
+  registrationUrl?: string | null;
+  url?: string | null;
+  tags?: string[] | null;
+  source?: string | null;
+  scope?: string | null;
+  organizer?: { name?: string | null } | string | null;
+}
+
+export function resolveEventUrl(e: RawEventLike): string {
   // 1. Direct registrationUrl property
-  if (e.registrationUrl && typeof e.registrationUrl === "string" && e.registrationUrl.startsWith("http")) {
+  if (
+    e.registrationUrl &&
+    typeof e.registrationUrl === "string" &&
+    e.registrationUrl.startsWith("http")
+  ) {
     const clean = e.registrationUrl.trim();
-    if (!clean.endsWith("lu.ma") && !clean.endsWith("luma.com/home") && !clean.endsWith("devpost.com")) {
+    if (
+      !clean.endsWith("lu.ma") &&
+      !clean.endsWith("luma.com/home") &&
+      !clean.endsWith("devpost.com")
+    ) {
       return clean;
     }
   }
@@ -29,7 +57,11 @@ export function resolveEventUrl(e: any): string {
   // 2. Direct url property (if not generic lu.ma or devpost)
   if (e.url && typeof e.url === "string" && e.url.startsWith("http")) {
     const clean = e.url.trim();
-    if (!clean.endsWith("lu.ma") && !clean.endsWith("luma.com/home") && !clean.endsWith("devpost.com")) {
+    if (
+      !clean.endsWith("lu.ma") &&
+      !clean.endsWith("luma.com/home") &&
+      !clean.endsWith("devpost.com")
+    ) {
       return clean;
     }
   }
@@ -37,11 +69,16 @@ export function resolveEventUrl(e: any): string {
   // 3. Extract embedded URL from description (e.g. "Official Registration: https://...")
   if (e.description && typeof e.description === "string") {
     const match =
-      e.description.match(/(?:Official Registration|Registration|URL|Host|Link):\s*(https?:\/\/[^\s\]]+)/i) ||
-      e.description.match(/(https?:\/\/[^\s\]]+)/i);
+      e.description.match(
+        /(?:Official Registration|Registration|URL|Host|Link):\s*(https?:\/\/[^\s\]]+)/i
+      ) || e.description.match(/(https?:\/\/[^\s\]]+)/i);
     if (match) {
       const extracted = match[1].trim();
-      if (!extracted.endsWith("lu.ma") && !extracted.endsWith("luma.com/home") && !extracted.endsWith("devpost.com")) {
+      if (
+        !extracted.endsWith("lu.ma") &&
+        !extracted.endsWith("luma.com/home") &&
+        !extracted.endsWith("devpost.com")
+      ) {
         return extracted;
       }
     }
@@ -50,10 +87,12 @@ export function resolveEventUrl(e: any): string {
   // 4. Fallback search (never generic lu.ma)
   const title = (e.title || "tech event").replace(/[^\w\s]/g, "");
   const city = (e.city || "Pakistan").replace(/[^\w\s]/g, "");
-  return `https://www.google.com/search?q=${encodeURIComponent(`${title} ${city} hackathon registration`)}`;
+  return `https://www.google.com/search?q=${encodeURIComponent(
+    `${title} ${city} hackathon registration`
+  )}`;
 }
 
-export function toCard(e: any): EventCard {
+export function toCard(e: RawEventLike): EventCard {
   const title = e.title ?? "Untitled";
   const rawDesc = e.description ?? "";
   const start = e.startTime ?? e.startsAt ?? null;
@@ -90,17 +129,26 @@ export function toCard(e: any): EventCard {
   const endsAt = end ? new Date(end).toISOString() : null;
   const isClosed = isRegistrationClosed({ startsAt, endsAt });
 
+  const organizerName =
+    typeof e.organizer === "string"
+      ? e.organizer
+      : e.organizer?.name || "Community Desk";
+
   return {
-    id: String(e.id),
+    id: String(e.id ?? ""),
     title,
-    organizer: e.organizer?.name ?? (typeof e.organizer === "string" ? e.organizer : "Community Desk"),
+    organizer: organizerName,
     city,
     venue: e.venue ?? (isGlobal ? "Online (Virtual)" : `${city}, Pakistan`),
-    description: cleanDescription || `${title} in ${city}. Register directly with the host.`,
+    description:
+      cleanDescription || `${title} in ${city}. Register directly with the host.`,
     type: String(e.type ?? e.category ?? "HACKATHON"),
     startsAt,
     endsAt,
-    tags: Array.isArray(e.tags) && e.tags.length > 0 ? e.tags : deriveTags(title, rawDesc),
+    tags:
+      Array.isArray(e.tags) && e.tags.length > 0
+        ? e.tags
+        : deriveTags(title, rawDesc),
     status: isClosed ? "CLOSED" : "OPEN",
     url,
     source,
@@ -108,7 +156,10 @@ export function toCard(e: any): EventCard {
   };
 }
 
-export function isRegistrationClosed(e: { startsAt?: string | null; endsAt?: string | null }): boolean {
+export function isRegistrationClosed(e: {
+  startsAt?: string | null;
+  endsAt?: string | null;
+}): boolean {
   if (!e.startsAt && !e.endsAt) return false;
   const now = Date.now();
   if (e.startsAt) {

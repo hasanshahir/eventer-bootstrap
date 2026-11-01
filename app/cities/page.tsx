@@ -172,9 +172,9 @@ const REGIONAL_DIVISIONS: Region[] = [
 ];
 
 export default async function CitiesPage() {
-  let events: any[] = [];
+  let events: { city: string }[] = [];
   try {
-    events = await (prisma as any).event.findMany({ select: { city: true } });
+    events = await prisma.event.findMany({ select: { city: true } });
   } catch {
     events = [];
   }
