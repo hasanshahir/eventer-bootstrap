@@ -8,7 +8,10 @@
       ],
       "numberOfRuns": 1,
       "settings": {
-        "chromeFlags": "--no-sandbox --headless --disable-gpu"
+        "chromeFlags": "--no-sandbox --headless=new --disable-gpu --disable-dev-shm-usage",
+        "throttling": {
+          "cpuSlowdownMultiplier": 1
+        }
       }
     },
     "assert": {
