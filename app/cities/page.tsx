@@ -1,196 +1,21 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { REGIONAL_DIVISIONS } from "@/lib/constants/geo";
+import { getPublicEvents } from "@/lib/events/queries";
+import { countByCityDesk, countOpenAndArchived } from "@/lib/events/selectors";
 
-export const dynamic = "force-dynamic";
-
-interface Desk {
-  slug: string;
-  city: string;
-  tag: string;
-  note: string;
-  isVirtual?: boolean;
-}
-
-interface Region {
-  id: string;
-  name: string;
-  desks: Desk[];
-}
-
-const REGIONAL_DIVISIONS: Region[] = [
-  {
-    id: "01",
-    name: "Federal & Virtual",
-    desks: [
-      {
-        slug: "online",
-        city: "Online / Virtual",
-        tag: "Nationwide Digital",
-        note: "Virtual Hackathons & Global",
-        isVirtual: true,
-      },
-      {
-        slug: "islamabad",
-        city: "Islamabad",
-        tag: "Federal AI & DeepTech",
-        note: "NUST, FAST, COMSATS",
-      },
-    ],
-  },
-  {
-    id: "02",
-    name: "Punjab Hubs",
-    desks: [
-      {
-        slug: "lahore",
-        city: "Lahore",
-        tag: "Startup & Dev Valley",
-        note: "LUMS, FAST, ITU, PUCIT",
-      },
-      {
-        slug: "rawalpindi",
-        city: "Rawalpindi",
-        tag: "Twin Cities Circuit",
-        note: "Cyber & Security Sprints",
-      },
-      {
-        slug: "faisalabad",
-        city: "Faisalabad",
-        tag: "Industrial Tech Center",
-        note: "AgriTech & Youth Summits",
-      },
-      {
-        slug: "multan",
-        city: "Multan",
-        tag: "South Punjab Devs",
-        note: "Bahauddin Zakariya Univ",
-      },
-      {
-        slug: "sialkot",
-        city: "Sialkot",
-        tag: "Active Tech Community",
-        note: "No open listings right now. This desk is ready for the next community dispatch.",
-      },
-      {
-        slug: "gujranwala",
-        city: "Gujranwala",
-        tag: "Active Tech Community",
-        note: "No open listings right now. This desk is ready for the next community dispatch.",
-      },
-    ],
-  },
-  {
-    id: "03",
-    name: "Sindh Hubs",
-    desks: [
-      {
-        slug: "karachi",
-        city: "Karachi",
-        tag: "Coastal Mega Hub",
-        note: "FAST, NED, IBA, TechJuice",
-      },
-      {
-        slug: "hyderabad",
-        city: "Hyderabad",
-        tag: "Sindh Univ Circuit",
-        note: "Mehran UET Circuit",
-      },
-      {
-        slug: "sukkur",
-        city: "Sukkur",
-        tag: "Active Tech Community",
-        note: "No open listings right now. This desk is ready for the next community dispatch.",
-      },
-    ],
-  },
-  {
-    id: "04",
-    name: "Khyber Pakhtunkhwa",
-    desks: [
-      {
-        slug: "peshawar",
-        city: "Peshawar",
-        tag: "Frontier Tech Hub",
-        note: "UET Peshawar, IM|Sciences",
-      },
-      {
-        slug: "topi",
-        city: "Topi (GIKI)",
-        tag: "GIKI Tech Oasis",
-        note: "ACM All-Pakistan Olympiad",
-      },
-      {
-        slug: "abbottabad",
-        city: "Abbottabad",
-        tag: "Active Tech Community",
-        note: "No open listings right now. This desk is ready for the next community dispatch.",
-      },
-      {
-        slug: "mardan",
-        city: "Mardan",
-        tag: "Active Tech Community",
-        note: "No open listings right now. This desk is ready for the next community dispatch.",
-      },
-      {
-        slug: "swat",
-        city: "Swat",
-        tag: "Active Tech Community",
-        note: "No open listings right now. This desk is ready for the next community dispatch.",
-      },
-    ],
-  },
-  {
-    id: "05",
-    name: "Balochistan & Emerging",
-    desks: [
-      {
-        slug: "quetta",
-        city: "Quetta",
-        tag: "Balochistan Tech Hub",
-        note: "BUITEMS & UoB Hub",
-      },
-      {
-        slug: "gilgit",
-        city: "Gilgit",
-        tag: "Active Tech Community",
-        note: "No open listings right now. This desk is ready for the next community dispatch.",
-      },
-      {
-        slug: "muzaffarabad",
-        city: "Muzaffarabad",
-        tag: "Active Tech Community",
-        note: "No open listings right now. This desk is ready for the next community dispatch.",
-      },
-      {
-        slug: "gwadar",
-        city: "Gwadar",
-        tag: "Active Tech Community",
-        note: "No open listings right now. This desk is ready for the next community dispatch.",
-      },
-    ],
-  },
-];
+export const revalidate = 300;
 
 export default async function CitiesPage() {
-  let events: { city: string }[] = [];
-  try {
-    events = await prisma.event.findMany({ select: { city: true } });
-  } catch {
-    events = [];
-  }
+  const events = await getPublicEvents();
+  const openDeskCounts = countByCityDesk(events, { openOnly: true });
+  const totalDeskCounts = countByCityDesk(events, { openOnly: false });
+  const { open: totalOpenEvents, total: totalEvents } =
+    countOpenAndArchived(events);
 
-  // Count active events per city
-  const counts: Record<string, number> = {};
-  for (const e of events) {
-    const c = (e.city || "").trim().toLowerCase();
-    counts[c] = (counts[c] ?? 0) + 1;
-    if (c === "remote" || c === "online" || c.includes("global") || c.includes("virtual")) {
-      counts["online"] = (counts["online"] ?? 0) + 1;
-    }
-  }
-
-  const totalDesks = REGIONAL_DIVISIONS.reduce((acc, r) => acc + r.desks.length, 0);
-  const totalEvents = events.length;
+  const totalDesks = REGIONAL_DIVISIONS.reduce(
+    (acc, r) => acc + r.desks.length,
+    0
+  );
 
   return (
     <div className="editorial-shell flex min-h-dvh flex-col bg-background text-foreground transition-colors duration-200">
@@ -215,20 +40,22 @@ export default async function CitiesPage() {
                   </svg>
                   Geographic wire / all provinces
                 </span>
-                <span className="font-mono text-muted-foreground">Pakistan / PKT</span>
+                <span className="font-mono text-muted-foreground">
+                  {totalOpenEvents} open &bull; {totalEvents} indexed &bull; Pakistan / PKT
+                </span>
               </div>
 
               {/* Large Headline */}
               <h1 className="mt-9 max-w-[12ch] font-heading text-[clamp(3.5rem,8vw,7.5rem)] font-medium leading-[0.85] tracking-[-0.05em] text-foreground">
                 Find your local
-                <span className="block italic text-primary">
-                  tech signal.
-                </span>
+                <span className="block italic text-primary">tech signal.</span>
               </h1>
 
               {/* Editorial Description */}
               <p className="mt-8 max-w-[55ch] border-l-4 border-primary pl-4 text-sm font-medium leading-relaxed sm:text-base text-foreground/80">
-                Follow university circuits, independent communities, developer meetups and open competitions from Karachi to Gilgit—and every active desk between.
+                Follow university circuits, independent communities, developer
+                meetups and open competitions from Karachi to Gilgit—and every
+                active desk between.
               </p>
             </div>
           </div>
@@ -255,16 +82,16 @@ export default async function CitiesPage() {
               </div>
               <div className="flex items-end justify-between py-6">
                 <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-background/60 dark:text-muted-foreground">
-                  Indexed events
+                  Open registrations
                 </dt>
                 <dd className="font-heading text-6xl text-background dark:text-foreground font-bold">
-                  {totalEvents}
+                  {totalOpenEvents}
                 </dd>
               </div>
             </dl>
 
             <p className="mt-8 font-mono text-[9px] uppercase leading-relaxed tracking-[0.13em] text-background/60 dark:text-muted-foreground">
-              City counts reflect currently indexed registrations and update as source feeds are scanned.
+              City counts reflect currently open registrations ({totalEvents} total indexed dispatches) and update as source feeds are scanned.
             </p>
           </aside>
         </div>
@@ -282,7 +109,8 @@ export default async function CitiesPage() {
             </h2>
           </div>
           <p className="max-w-[36ch] text-xs leading-relaxed text-muted-foreground sm:text-right">
-            Each dispatch opens a live event feed filtered to that city or region.
+            Each dispatch opens a live event feed filtered to that city or
+            region.
           </p>
         </div>
 
@@ -310,11 +138,9 @@ export default async function CitiesPage() {
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 mt-6">
                 {region.desks.map((desk, idx) => {
                   const deskNumber = `${region.id}.${String(idx + 1).padStart(2, "0")}`;
-                  const lookupKey = desk.city.toLowerCase();
-                  const eventCount =
-                    counts[lookupKey] ??
-                    (desk.isVirtual ? counts["online"] ?? counts["remote"] ?? 0 : 0);
-                  const hasEvents = eventCount > 0;
+                  const openCount = openDeskCounts[desk.slug] ?? 0;
+                  const totalForDesk = totalDeskCounts[desk.slug] ?? 0;
+                  const hasOpenEvents = openCount > 0;
 
                   return (
                     <article
@@ -322,7 +148,11 @@ export default async function CitiesPage() {
                       className="group min-h-[18rem] border border-foreground/30 bg-card transition-all flex flex-col p-5 sm:p-6 hover:border-primary hover:bg-background shadow-[2px_2px_0px_0px_currentColor]"
                     >
                       <Link
-                        href={desk.isVirtual ? "/?scope=global" : `/?city=${encodeURIComponent(desk.city)}`}
+                        href={
+                          desk.isVirtual
+                            ? "/?scope=global"
+                            : `/?city=${encodeURIComponent(desk.city)}`
+                        }
                         className="flex h-full min-h-[18rem] flex-col outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
                         aria-label={`View events in ${desk.city}`}
                       >
@@ -376,19 +206,25 @@ export default async function CitiesPage() {
                           <div className="mt-6 flex items-end justify-between border-t border-foreground/20 pt-4">
                             <div>
                               <span className="block font-heading text-4xl font-semibold text-primary">
-                                {eventCount}
+                                {openCount}
                               </span>
                               <span className="font-mono text-[8px] uppercase tracking-[0.13em] text-muted-foreground">
-                                {hasEvents
-                                  ? eventCount === 1
+                                {hasOpenEvents
+                                  ? openCount === 1
                                     ? "Open event"
                                     : "Open events"
-                                  : "Awaiting listings"}
+                                  : totalForDesk > 0
+                                    ? `${totalForDesk} archived`
+                                    : "Awaiting listings"}
                               </span>
                             </div>
 
                             <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-foreground group-hover:text-primary transition-colors">
-                              <span>{hasEvents ? "Open desk" : "View empty desk"}</span>
+                              <span>
+                                {hasOpenEvents || totalForDesk > 0
+                                  ? "Open desk"
+                                  : "View empty desk"}
+                              </span>
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 width="1em"

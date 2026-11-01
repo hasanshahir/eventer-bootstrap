@@ -1,6 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { env } from "../lib/env";
-import { discoverAllEvents, syncDiscoveredEventsToPrisma } from "../lib/discover-events";
+import { runIngestionPipeline } from "../lib/ingest/run";
 import { migratePhoneFromRollNumber } from "../scripts/migrate-phone-rollnumber";
 
 async function main() {
@@ -17,8 +17,14 @@ async function main() {
   }
 
   // 2. Seed initial ADMIN account from ADMIN_EMAIL env variable
-  const adminEmail = (process.env.ADMIN_EMAIL || env.ADMIN_EMAIL || "").trim().toLowerCase();
-  const adminName = (process.env.ADMIN_NAME || env.ADMIN_NAME || "Eventr Admin").trim();
+  const adminEmail = (process.env.ADMIN_EMAIL || env.ADMIN_EMAIL || "")
+    .trim()
+    .toLowerCase();
+  const adminName = (
+    process.env.ADMIN_NAME ||
+    env.ADMIN_NAME ||
+    "Eventr Admin"
+  ).trim();
 
   if (adminEmail) {
     const adminUser = await prisma.user.upsert({
@@ -69,11 +75,12 @@ async function main() {
     console.log(`Seeded ADMIN user: ${adminUser.email} (${adminUser.id})`);
   }
 
-  // 3. Seed initial events
-  console.log("Syncing events into database...");
-  const data = await discoverAllEvents(true);
-  await syncDiscoveredEventsToPrisma(data.events);
-  console.log(`Seeded ${data.events.length} events.`);
+  // 3. Seed curated baseline events via modular ingestion pipeline
+  console.log("Seeding curated events into database...");
+  const summary = await runIngestionPipeline({ includeLiveConnectors: false });
+  console.log(
+    `Ingestion complete: fetched=${summary.fetchedCount}, upserted=${summary.upsertedCount}, archived=${summary.archivedCount}`
+  );
 }
 
 main()
