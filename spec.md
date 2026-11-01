@@ -1,6 +1,6 @@
 # Eventr — Product & Technical Specification (spec.md)
 
-> **AI-Powered Tech Radar for Pakistani Developers and Students**  
+> **Pakistan’s Production-Ready Developer & Tech Event Hub**  
 > *Discover, sync, and register for nationwide hackathons, workshops, and meetups in one tap.*
 
 ---
@@ -8,301 +8,94 @@
 ## 1. Executive Summary & Vision
 
 ### 1.1 Problem Statement
-The developer and student tech ecosystem in Pakistan is vibrant but deeply fragmented. Technical events—ranging from university hackathons (at NED, FAST, NUST, GIKI, LUMS, ITU, COMSATS) to tech community gatherings (Google Developer Groups, MLSA, AWS User Groups, IEEE, ACM)—are announced across disparate platforms:
-- Cluttered WhatsApp and Discord groups
-- Unindexed LinkedIn/Facebook image posts and banners
-- Local university notice boards and campus societies
-- Scattered Google Forms and Typeforms with zero unified attendee tracking
-
-**Key pain points:**
-- **Discovery Friction:** Developers frequently discover hackathons and workshops *after* registration deadlines have passed.
-- **Form Fatigue:** Students repeatedly re-enter the same personal details, university roll numbers, GitHub profiles, and team details on unstandardized forms.
-- **Calendar & Deadline Disconnect:** No centralized, automated calendar synchronization or intelligent reminder cadence.
-- **Organizer Overhead:** Campus leads struggle with attendee verification, walk-in management, check-in congestion, and credential issuance.
+The developer and student tech ecosystem in Pakistan is vibrant but historically fragmented. Technical events—ranging from university hackathons (at NED, FAST, NUST, GIKI, LUMS, ITU, COMSATS) to tech community gatherings (Google Developer Groups, MLSA, AWS User Groups, IEEE, ACM)—have been scattered across disparate platforms:
+- Unindexed WhatsApp and Discord groups
+- Low-resolution social media flyers with missing links
+- Campus notice boards with outdated schedules
+- Google Forms with zero unified attendee tracking or ticket generation
 
 ### 1.2 Product Vision
-**Eventr** is a unified, intelligent tech radar that aggregates, structures, and presents verified technical events across Pakistan. Armed with multimodal AI parsing, developer-first profiles, one-tap registration, and automated calendar sync, Eventr bridges the gap between ambitious builders and transformative opportunities.
+**Eventr** provides a unified, production-grade tech radar that aggregates, structures, and presents verified technical events across 20 regional Pakistani desks and global virtual circuits. Armed with multimodal AI parsing, developer-first profiles, 1-tap registration, cryptographic passes, and automated calendar sync, Eventr bridges the gap between ambitious builders and transformative opportunities.
 
 ---
 
-## 2. Target Personas
+## 2. Technical Stack Specification
 
-| Persona | Description | Core Needs |
+| Component | Specification | Description |
 | :--- | :--- | :--- |
-| **Student Builder** (e.g., Sophomore at NED/FAST) | Aspiring software engineer seeking hackathons, cash prizes, and hands-on workshops. | Early deadline alerts, teammate discovery, 1-tap registration with university credentials. |
-| **Professional / Open-Sourcerer** | Working engineer or senior student looking for deep-dive meetups, tech talks, and networking. | Filtering by skill/stack (AI/ML, DevOps, Web3, Cloud), calendar sync, Google/Outlook integration. |
-| **Community Organizer / Campus Lead** | GDG Lead, ACM/IEEE Chair, or university club president organizing tech events. | Easy listing, automated poster-to-event parsing, verified student check-in scanner, registration analytics. |
+| **Framework** | Next.js 16.4.3 (App Router) | Server Components, Route Handlers, Edge OG Image Generation |
+| **Runtime** | Node.js >= 20 | Long-Term Support engine |
+| **Language** | TypeScript 5.4 | Strict type checking with zero `any` overrides |
+| **Database** | PostgreSQL (Neon Serverless) | Connection pooled PostgreSQL with SSL enforcement |
+| **ORM** | Prisma 5.22 | Transactional queries, migrations, and seeding |
+| **Authentication** | Auth.js v5 (`next-auth@beta`) | Google OAuth 2.0 & Resend Passwordless Magic Links |
+| **Security & Crypto** | `jose` (HS256) & Node `crypto` (AES-256-GCM) | Tamper-evident JWT tickets and PII field encryption |
+| **CSS & Design** | Tailwind CSS 3.4 | RGB channel CSS custom properties with full opacity modifier support |
+| **Typography** | `next/font/google` | Self-hosted IBM Plex Sans, IBM Plex Mono & Newsreader |
+| **Observability** | `@sentry/nextjs` & `/api/health` | Error reporting and synthetic database health monitoring |
+| **Testing** | Vitest 5.0 & Playwright 1.64 | Unit, route security, concurrency, E2E, and Axe-core accessibility |
 
 ---
 
-## 3. Core Features & Capabilities
+## 3. Implementation Status Matrix
 
-```
-+-----------------------------------------------------------------------+
-|                              EVENTR RADAR                             |
-+-----------------------------------------------------------------------+
-        |                                       |
-        v                                       v
- [AI Ingestion Engine]                 [User Experience]
-  - Poster OCR & LLM Extraction         - City/Campus Radar Feed
-  - WhatsApp & LinkedIn Ingest          - Stack & Category Filters
-  - Dedup & Verification                - 1-Tap Registration
-        |                                       |
-        +-------------------+-------------------+
-                            |
-                            v
-                [Unified Event Passport]
-                 - Dynamic QR Check-in
-                 - Google/Apple Calendar Sync
-                 - Automated Teammate Matching
-```
-
-### 3.1 AI-Powered Discovery Radar & Multimodal Ingestion
-- **Poster & Flyer Extraction:** Organizers or bots can upload an event banner/flyer; Gemini 1.5 multimodal parsing automatically extracts:
-  - Event title, description, and category (Hackathon, Workshop, Meetup, Competition, Conference)
-  - Date, start/end time, and timezone (PKT / UTC+5)
-  - Venue (University, Co-working space, or Virtual link) and City (Karachi, Lahore, Islamabad, Peshawar, etc.)
-  - Eligibility criteria, registration deadlines, and ticket pricing (Free vs. Paid in PKR)
-- **Community Feed Aggregation:** Scrapers for public tech community feeds and event portals with automated deduplication and human-in-the-loop organizer approval.
-
-### 3.2 One-Tap Registration & "DevPassport"
-- **Unified Profile:** Developers store their verified profile once (Name, Email, Phone/WhatsApp, University, Department, Graduation Year, GitHub, LinkedIn, Primary Tech Stack).
-- **One-Tap RSVP / Apply:** Instantly submits prefilled data to the host's event roster without repeating boilerplate input.
-- **Team Matchmaking & Group Registration:** Create teams with shareable invite codes for hackathons; validate team size constraints automatically.
-
-### 3.3 Two-Way Multi-Calendar Sync
-- **Native Calendar Sync:** Instant integration with Google Calendar, Apple Calendar, and Microsoft Outlook via RFC 5545 iCalendar (`.ics`) feeds and OAuth direct-push.
-- **Adaptive Reminders:** Configurable notification alerts sent 72 hours, 24 hours, and 2 hours before the event via Web Push and WhatsApp alerts.
-
-### 3.4 Digital Passports & Rapid Check-in
-- **Cryptographic QR Passes:** Attendees receive a dynamic, tamper-evident QR code pass stored in the app and Apple/Google Wallet.
-- **Organizer Scanner PWA:** High-speed, offline-first camera scanner for organizers to check in hundreds of participants in minutes.
+| Area | Feature / Capability | Audit Item | Status | Verification & Evidence |
+| :--- | :--- | :--- | :--- | :--- |
+| **Security** | Auth.js v5 Google & Magic Link session handling | `S-01`, `S-02`, `S-03` | **COMPLETED** | Zero plaintext passwords, encrypted JWE session cookies (`lib/auth.ts`, `app/login/page.tsx`) |
+| **Security** | Gated registration query & user data isolation | `S-04` | **COMPLETED** | `GET /api/v1/registrations` returns only authenticated caller's registrations (`tests/integration/routes-phase1.test.ts`) |
+| **Security** | Cryptographic HS256 JWT tickets & Gate verification | `S-05`, `F-14` | **COMPLETED** | Signed tickets bound to event & nonce; verified at `/api/v1/checkin` (`lib/tickets.ts`) |
+| **Security** | Role-Based Access Control (RBAC) | `S-06`, `S-07` | **COMPLETED** | `requireRole`, `requireOrganizerForEvent`; organizer derived from `OrganizerMember` (`lib/authz.ts`) |
+| **Security** | Rate Limiting & Cloudflare Turnstile CAPTCHA | `S-08`, `S-09` | **COMPLETED** | Rate limits on RSVP, check-in, submission & parse; Turnstile on public writes (`lib/ratelimit.ts`, `lib/turnstile.ts`) |
+| **Security** | PII Encryption at Rest & Account Deletion | `S-10`, `S-11` | **COMPLETED** | AES-256-GCM encryption on contact fields; transactional account deletion (`lib/crypto.ts`, `app/api/v1/account`) |
+| **Security** | Hardened Security Headers & Content Security Policy | `S-12` | **COMPLETED** | HSTS, X-Content-Type-Options, Frame-Options DENY, strict CSP (`next.config.mjs`) |
+| **Security** | Safe Secret Handling & Production Enforcement | `S-13`, `S-14` | **COMPLETED** | `lib/env.ts` enforces 32-character secrets in production; Gemini key via `x-goog-api-key` header |
+| **Data Engine** | Scheduled Ingestion (Devpost, GDG, Luma, Campus) | `F-01`, `F-07` | **COMPLETED** | Modular pipeline (`lib/ingest/`); `GET /api/cron/ingest` runs nightly at 02:00 UTC |
+| **Data Engine** | Multi-Month Date Parsing & Deduplication | `F-08`, `F-10` | **COMPLETED** | Multi-month range support; cross-source deduplication; 40 curated Pakistani 2026 events |
+| **Data Engine** | Stale Event Archival (`missedRuns >= 3`) | Requirement #3 | **COMPLETED** | Automatically marks unseen events as `ARCHIVED` (`lib/ingest/run.ts`) |
+| **Core Flows** | High-Contention 1-Tap RSVP & Waitlist Promotion | `F-02`, `F-15` | **COMPLETED** | Serializable transaction with bounded retry; cancellations promote oldest waitlisted attendee |
+| **Core Flows** | Multimodal AI Flyer Parser (Gemini 2.5 Flash) | `F-03`, `F-13` | **COMPLETED** | Multipart upload; zero fake mock fallback in production (`app/api/v1/events/ai-parse/route.ts`) |
+| **Core Flows** | RFC 5545 iCalendar (`.ics`) & Google Calendar | `F-04` | **COMPLETED** | Standard `.ics` download & GCal URLs with 2-hour default duration and `VALUE=DATE` (`lib/calendar.ts`) |
+| **Core Flows** | Organizer Gate Scanner & Anti-Injection CSV Roster | `F-09`, `F-12` | **COMPLETED** | Live camera viewfinder, event selector, real-time tallies, and formula-escaped CSV roster |
+| **Core Flows** | Admin Moderation Desk (`PENDING` -> `APPROVED`) | Requirement #6 | **COMPLETED** | `/admin/events` interface for approving or rejecting submitted campus events |
+| **Frontend** | Consistent Counts & Unified Statistical Selectors | `F-05` | **COMPLETED** | `lib/events/selectors.ts` drives identical counts across hero masthead, source ledger & feeds |
+| **Frontend** | Word-Boundary Tag Matching & Honest Match Scoring | `F-06` | **COMPLETED** | Strict token boundaries (`(^|[^a-z0-9])`); returns 0% when zero stack overlap (`lib/match.ts`) |
+| **Frontend** | RGB Theme Custom Properties & Tailwind Opacity | `U-01` | **COMPLETED** | `var(--foreground / <alpha-value>)` works seamlessly across light and dark themes (`app/globals.css`) |
+| **Frontend** | Self-Hosted Google Fonts | `U-05` | **COMPLETED** | Migrated to `next/font/google` (`IBM Plex Sans`, `IBM Plex Mono`, `Newsreader`) |
+| **Frontend** | Dedicated City Pages & Regional Desks | `U-06`, `U-07` | **COMPLETED** | `/cities` and `/cities/[slug]` for all 20 regional desks; resilient error boundaries |
+| **Frontend** | Responsive Navigation & Always-Visible Passport | `U-02`, `U-04` | **COMPLETED** | Mobile hamburger drawer; Passport link visible to both guests and members (`components/Navbar.tsx`) |
+| **SEO & Ops** | Event Detail Pages with schema.org/Event JSON-LD | `D-03` | **COMPLETED** | `/events/[slug]` with structured schema markup, canonical URLs, and dynamic OpenGraph image |
+| **SEO & Ops** | Sitemap & Robots.txt | `D-03` | **COMPLETED** | Auto-generated `/sitemap.xml` and `/robots.txt` indexing all active desks and events |
+| **SEO & Ops** | Uptime Health Probes & Sentry Observability | `D-01`, `D-02` | **COMPLETED** | `GET /api/health` probes database connectivity; Sentry captures uncaught client/server faults |
+| **Quality** | Complete Test Suite & CI Automation | `D-05`, `D-06` | **COMPLETED** | 42 unit/integration tests passing; Playwright E2E and Axe accessibility suite; GitHub Actions CI |
 
 ---
 
-## 4. Technical Architecture
+## 4. Canonical API Endpoints
 
-### 4.1 Recommended Tech Stack
+### 4.1 Public Endpoints
+- `GET /api/health`: Synthetic uptime health probe checking database connectivity and response latency.
+- `GET /api/v1/events`: Filtered list of approved and archived events (`?city=`, `?type=`, `?scope=`, `?openOnly=`, `?q=`).
+- `GET /api/v1/events/[slug]`: Single event record by slug or identifier.
+- `GET /api/v1/calendar/event/[id]`: RFC 5545 iCalendar (`.ics`) payload for direct calendar import.
 
-| Layer | Technology | Rationale |
-| :--- | :--- | :--- |
-| **Frontend / Web** | **Next.js 14 (App Router), React, Tailwind CSS, Lucide Icons** | SEO optimization for public event indexing, fast SSR/SSG, and responsive mobile-first UX. |
-| **Mobile Client** | **Progressive Web App (PWA) + Flutter / React Native** | Instant install on iOS & Android devices without app store delays; push notification support. |
-| **Backend API** | **Next.js Route Handlers / FastAPI (Python)** | High-throughput async handling, Python ecosystem integration for AI extraction routines. |
-| **AI / OCR Service** | **Google Gemini 1.5 Flash / Vision API** | Fast, cost-efficient multimodal extraction from flyer graphics and Pakistani context parsing. |
-| **Database** | **PostgreSQL (Neon / Supabase)** | Relational integrity for bookings and transactions with JSONB flexibility for dynamic forms. |
-| **Cache & Queue** | **Upstash Redis / Cloudflare Workers** | Rate limiting, live attendee count caches, and scheduled event reminder queues. |
-| **Object Storage** | **Cloudflare R2 / AWS S3** | Ultra-low-latency hosting of flyer images, sponsor banners, and digital ticket assets. |
-| **Auth** | **Clerk / Supabase Auth** | Built-in GitHub, Google, and email OTP authentication with role-based access control. |
-| **Notifications** | **Firebase Cloud Messaging (FCM) + Resend + WhatsApp Cloud API** | Omnichannel alerts for event acceptance, timetable adjustments, and venue updates. |
+### 4.2 Authenticated Attendee Endpoints
+- `GET /api/v1/account`: Retrieves the authenticated user's profile and Decrypted contact information.
+- `PATCH /api/v1/account`: Updates profile fields (encrypting phone/WhatsApp credentials at rest).
+- `DELETE /api/v1/account`: GDPR/CCPA compliant transactional account deletion.
+- `GET /api/v1/account/export`: Full JSON data export of all personal information and registrations.
+- `GET /api/v1/registrations`: Retrieves caller's active registrations with signed HS256 ticket JWTs.
+- `POST /api/v1/registrations`: 1-Tap RSVP reserving a seat or entering the event waitlist.
+- `DELETE /api/v1/registrations/[id]`: Cancels registration and atomically promotes oldest waitlisted attendee.
 
-### 4.2 System Data Flow Diagram
+### 4.3 Organizer Endpoints
+- `POST /api/v1/events`: Submits a new event dispatch (deriving organizer from `OrganizerMember`).
+- `POST /api/v1/events/ai-parse`: Gemini 2.5 Flash multimodal flyer extraction via multipart upload.
+- `GET /api/v1/organizer/events`: Roster of events managed by the authenticated organizer.
+- `GET /api/v1/organizer/events/[id]/roster.csv`: Formula-escaped RFC-4180 attendee roster download.
+- `POST /api/v1/checkin`: Validates signed HS256 ticket JWT and checks in attendee at the gate.
 
-```
-[Organizer / Community] 
-       │ (Uploads Poster / Flyer)
-       ▼
- [Next.js Web / API] ──► [FastAPI / Gemini 1.5] (Extracts structured JSON)
-       │
-       ▼
- [PostgreSQL (Neon)] ◄─── (Stores verified event details & coordinates)
-       ▲
-       │
- [Developer / Student] ──► [One-Tap RSVP] ──► [Generates QR Ticket & .ICS]
-                                                    │
-                                                    ▼
-                                          [Syncs to Google Calendar]
-```
-
----
-
-## 5. Data Model & Database Schema
-
-```sql
--- Users & Developers
-CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    full_name VARCHAR(150) NOT NULL,
-    phone_number VARCHAR(20),
-    github_handle VARCHAR(100),
-    linkedin_url TEXT,
-    university VARCHAR(150),
-    degree_program VARCHAR(100),
-    graduation_year INT,
-    city VARCHAR(80) NOT NULL,
-    tech_stack TEXT[], -- e.g. ['React', 'Python', 'Flutter']
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Organizers & Communities
-CREATE TABLE organizers (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(200) NOT NULL,
-    slug VARCHAR(100) UNIQUE NOT NULL,
-    logo_url TEXT,
-    verified BOOLEAN DEFAULT FALSE,
-    contact_email VARCHAR(255) NOT NULL,
-    website_url TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Events
-CREATE TYPE event_type AS ENUM ('HACKATHON', 'WORKSHOP', 'MEETUP', 'CONFERENCE', 'COMPETITION');
-CREATE TYPE event_mode AS ENUM ('IN_PERSON', 'ONLINE', 'HYBRID');
-
-CREATE TABLE events (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organizer_id UUID REFERENCES organizers(id) ON DELETE SET NULL,
-    title VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) UNIQUE NOT NULL,
-    description TEXT,
-    type event_type NOT NULL DEFAULT 'MEETUP',
-    mode event_mode NOT NULL DEFAULT 'IN_PERSON',
-    venue_name VARCHAR(255),
-    venue_address TEXT,
-    city VARCHAR(80) NOT NULL,
-    latitude DOUBLE PRECISION,
-    longitude DOUBLE PRECISION,
-    banner_url TEXT,
-    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
-    end_time TIMESTAMP WITH TIME ZONE NOT NULL,
-    registration_deadline TIMESTAMP WITH TIME ZONE NOT NULL,
-    capacity INT,
-    price_pkr NUMERIC(10, 2) DEFAULT 0.00,
-    tags TEXT[],
-    is_published BOOLEAN DEFAULT FALSE,
-    is_featured BOOLEAN DEFAULT FALSE,
-    raw_ai_metadata JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Registrations & Passes
-CREATE TYPE registration_status AS ENUM ('PENDING', 'CONFIRMED', 'WAITLISTED', 'CANCELLED', 'CHECKED_IN');
-
-CREATE TABLE registrations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    event_id UUID REFERENCES events(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    team_id UUID,
-    status registration_status DEFAULT 'CONFIRMED',
-    ticket_token VARCHAR(64) UNIQUE NOT NULL,
-    checked_in_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(event_id, user_id)
-);
-
--- Hackathon Teams
-CREATE TABLE teams (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    event_id UUID REFERENCES events(id) ON DELETE CASCADE,
-    name VARCHAR(100) NOT NULL,
-    invite_code VARCHAR(16) UNIQUE NOT NULL,
-    leader_id UUID REFERENCES users(id) ON DELETE RESTRICT,
-    max_members INT DEFAULT 4,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-```
-
----
-
-## 6. API Interface Specification
-
-### 6.1 Public Radar & Event Endpoints
-- `GET /api/v1/events`  
-  *Query params:* `city`, `type`, `mode`, `tags`, `from_date`, `to_date`, `query`, `page`, `limit`  
-  *Response:* Paginated list of active events with organizer badge and registration counters.
-
-- `GET /api/v1/events/:slug`  
-  *Response:* Detailed event view with agenda, speakers, sponsor details, remaining seats, and registration state.
-
-- `POST /api/v1/events/ai-parse`  
-  *Payload:* Multipart form data with flyer image or text link.  
-  *Response:* Structured JSON schema with extracted parameters for organizer confirmation.
-
-### 6.2 Registration & Developer Passport
-- `POST /api/v1/events/:id/register`  
-  *Headers:* `Authorization: Bearer <token>`  
-  *Payload:* `{ team_invite_code?: string, custom_answers?: Record<string, any> }`  
-  *Response:* `{ registration_id, ticket_token, qr_code_url, calendar_sync_urls }`
-
-- `GET /api/v1/calendar/event/:id.ics`  
-  *Response:* Dynamic iCalendar file formatted for Google Calendar, Apple Calendar, and Outlook.
-
-### 6.3 Organizer Operations
-- `POST /api/v1/organizer/check-in`  
-  *Payload:* `{ event_id: string, ticket_token: string }`  
-  *Response:* `{ success: true, attendee: { name, university, email }, timestamp }`
-
-- `GET /api/v1/organizer/events/:id/roster.csv`  
-  *Response:* Real-time export of confirmed attendees for administrative reporting.
-
----
-
-## 7. UI/UX & Information Architecture
-
-### 7.1 Key Views
-1. **The Radar (Home):**
-   - Interactive City Switcher (Karachi | Lahore | Islamabad | Hybrid / Remote)
-   - Dynamic Filter Ribbon (Hackathons, Workshops, Conferences, Free Food, Cash Prizes)
-   - "Happening This Weekend" and "Ending Soon" priority cards
-2. **Event Details Sheet:**
-   - Hero banner with venue map preview
-   - Live seat countdown indicator
-   - "One-Tap Register" prominent action button
-   - "Add to Calendar" dropdown with 1-click Google Calendar URL & .ics download
-3. **DevPassport (My Tickets):**
-   - Active QR passes with animated anti-screenshot watermark
-   - Past participation history & verifiable skill badges
-4. **Organizer Studio:**
-   - Multi-image flyer dropzone with live AI parsing preview
-   - Live check-in dashboard with real-time tally counter
-
----
-
-## 8. Security, Privacy & Local Compliance
-
-- **Personal Data Protection:** Student phone numbers and roll numbers are strictly encrypted at rest and only exposed to verified event organizers upon confirmed RSVP.
-- **Bot Mitigation & Anti-Spam:** Cloudflare Turnstile integration on registration and ingestion endpoints to avoid bot flood attacks.
-- **Organizer Verification Tiers:**
-  - *Tier 1 (Official Community):* Verified university societies, GDGs, and registered companies.
-  - *Tier 2 (Independent):* Community-submitted events requiring moderation before public radar broadcast.
-- **Offline Resilient Check-In:** Signed JWTs in QR codes allow organizers to validate passes even under intermittent campus Wi-Fi / cellular data connectivity.
-
----
-
-## 9. Implementation Roadmap
-
-### Phase 1: Foundation & Event Radar (Weeks 1–3)
-- [x] Initial specification & repository setup (`spec.md`)
-- [ ] Database schema provisioning (PostgreSQL / Neon)
-- [ ] Next.js app scaffolding with responsive Tailwind UI
-- [ ] Public event browsing, city/type filters, and search indexing
-- [ ] Google & GitHub OAuth integration via Clerk / Supabase
-
-### Phase 2: AI Ingestion & Calendar Sync (Weeks 4–5)
-- [ ] Gemini 1.5 multimodal parser for event flyers and promotional banners
-- [ ] Manual organizer review & publishing dashboard
-- [ ] RFC 5545 `.ics` feed generator and 1-tap Google Calendar sync link
-
-### Phase 3: Registration, Teams & QR Passport (Weeks 6–7)
-- [ ] Unified developer profile setup (1-tap auto-fill)
-- [ ] Team creation and invite codes for hackathons
-- [ ] Signed QR code pass generator and mobile scanner PWA
-- [ ] Email confirmations with embedded ticket assets (Resend)
-
-### Phase 4: Scale, WhatsApp Notifications & Campus Network (Weeks 8+)
-- [ ] WhatsApp Cloud API integration for deadline and venue change alerts
-- [ ] Campus Ambassador portal for university society leads
-- [ ] Analytics dashboard for sponsors and event organizers
-
----
-
-## 10. Repository & Contribution Standards
-
-- **Branching Strategy:** `main` (production), `develop` (staging), `feature/<name>` (features).
-- **Commit Conventions:** Conventional Commits (`feat:`, `fix:`, `docs:`, `perf:`, `chore:`).
-- **Author Identity:** Hasan Shahir (`hasanshahirconnect@gmail.com`).
-- **License:** MIT License.
+### 4.4 Admin Moderation & Automation
+- `GET /api/v1/admin/events`: Lists pending, approved, and rejected events for moderator review.
+- `PATCH /api/v1/admin/events/[id]`: Approves or rejects a submitted event.
+- `GET /api/cron/ingest`: Triggered nightly to ingest, deduplicate, and archive regional events.
+- `GET /api/cron/link-check`: Verifies host URL responsiveness and archives broken listings.
