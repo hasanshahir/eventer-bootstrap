@@ -33,7 +33,7 @@ jobs:
       AUTH_SECRET: ci-test-auth-secret-minimum-32-characters-long
       AUTH_URL: http://localhost:3000
       NEXT_PUBLIC_APP_URL: http://localhost:3000
-      AUTH_TEST_TRANSPORT: "true"
+      AUTH_TEST_TRANSPORT: "false"
       ADMIN_EMAIL: admin@eventr.pk
       ADMIN_NAME: Eventr CI Admin
       TICKET_SIGNING_SECRET: ci-test-ticket-signing-secret-minimum-32-chars
