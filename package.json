@@ -25,6 +25,7 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
     "@prisma/client": "^5.22.0",
+    "@sentry/nextjs": "^11.10.0",
     "html5-qrcode": "^2.3.8",
     "jose": "^6.2.14",
     "next": "^16.4.3",

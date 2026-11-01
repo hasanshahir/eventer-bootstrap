@@ -8,7 +8,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com data:",
       "img-src 'self' data: blob: https://*.googleusercontent.com",
-      "connect-src 'self' https://challenges.cloudflare.com",
+      "connect-src 'self' https://challenges.cloudflare.com https://*.ingest.sentry.io https://*.sentry.io",
       "frame-src https://challenges.cloudflare.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
