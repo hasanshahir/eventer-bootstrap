@@ -1,0 +1,10 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignore documentation, unit test mocks, and .env.example"
+paths = [
+  '''^\.env\.example$''',
+  '''^docs/.*''',
+  '''^tests/.*''',
+]
