@@ -31,25 +31,11 @@ const FEATURED_CITY_SLUGS = [
   "online",
 ];
 
-function isOnlineOrVirtualEvent(e: EventCard): boolean {
-  const cityLower = (e.city || "").toLowerCase();
-  const modeUpper = (e.mode || "").toUpperCase();
-  return (
-    modeUpper === "ONLINE" ||
-    e.scope === "global" ||
-    cityLower.includes("global") ||
-    cityLower.includes("virtual") ||
-    cityLower.includes("online")
-  );
-}
-
 export default function Feed({ events }: { events: EventCard[] }) {
   const params = useSearchParams();
   const [feedEvents, setFeedEvents] = useState<EventCard[]>(events);
   const [scope, setScope] = useState<"ALL" | "PAKISTAN" | "GLOBAL">("ALL");
-  const [attendanceMode, setAttendanceMode] = useState<
-    "ALL" | "PHYSICAL" | "ONLINE"
-  >("ALL");
+  const [attendanceMode, setAttendanceMode] = useState<"ALL" | "PHYSICAL" | "ONLINE">("ALL");
   const [openOnly, setOpenOnly] = useState(false);
   const [showStackDrawer, setShowStackDrawer] = useState(false);
 
@@ -85,20 +71,9 @@ export default function Feed({ events }: { events: EventCard[] }) {
     const c = params.get("city");
     const s = params.get("scope");
     const t = params.get("type");
-    const m = params.get("mode");
     const queryParam = params.get("q");
     if (t) setType(t);
     if (queryParam) setQ(queryParam);
-    if (m) {
-      const upperM = m.toUpperCase();
-      if (
-        upperM === "PHYSICAL" ||
-        upperM === "ONLINE" ||
-        upperM === "ALL"
-      ) {
-        setAttendanceMode(upperM);
-      }
-    }
     if (s) {
       const upper = s.toUpperCase();
       if (upper === "PAKISTAN" || upper === "GLOBAL" || upper === "ALL") {
@@ -115,7 +90,6 @@ export default function Feed({ events }: { events: EventCard[] }) {
         setCity("Online");
         setSelectedCityDeskSlug("online");
         setScope("GLOBAL");
-        setAttendanceMode("ONLINE");
       } else {
         setCity(c);
         const matchedDesk = Object.values(CITY_DESK_MAP).find(
@@ -138,8 +112,6 @@ export default function Feed({ events }: { events: EventCard[] }) {
     try {
       const nextParams = new URLSearchParams();
       if (scope !== "ALL") nextParams.set("scope", scope.toLowerCase());
-      if (attendanceMode !== "ALL")
-        nextParams.set("mode", attendanceMode.toLowerCase());
       if (city && city !== "All") nextParams.set("city", city);
       if (type && type !== "All") nextParams.set("type", type);
       if (q.trim()) nextParams.set("q", q.trim());
@@ -149,16 +121,36 @@ export default function Feed({ events }: { events: EventCard[] }) {
         : `${window.location.pathname}${window.location.hash}`;
       window.history.replaceState(null, "", targetUrl);
     } catch {}
-  }, [scope, attendanceMode, city, type, q]);
+  }, [scope, city, type, q]);
+
+  function scrollToRadar() {
+    const el = document.getElementById("radar-index");
+    el?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function isOnlineEvent(e: EventCard): boolean {
+    const c = (e.city || "").toLowerCase();
+    const m = (e.mode || "").toUpperCase();
+    return (
+      m === "ONLINE" ||
+      e.scope === "global" ||
+      c.includes("global") ||
+      c.includes("virtual") ||
+      c.includes("online")
+    );
+  }
 
   function handleScopeChange(nextScope: "ALL" | "PAKISTAN" | "GLOBAL") {
     setScope(nextScope);
     if (nextScope === "PAKISTAN") {
       if (city.toLowerCase() === "online") setCity("All");
       if (attendanceMode === "ONLINE") setAttendanceMode("ALL");
-    } else if (nextScope === "GLOBAL") {
-      setCity("Online");
-      setAttendanceMode("ONLINE");
+    } else if (
+      nextScope === "GLOBAL" &&
+      city !== "All" &&
+      city.toLowerCase() !== "online"
+    ) {
+      setCity("All");
     }
   }
 
@@ -222,18 +214,18 @@ export default function Feed({ events }: { events: EventCard[] }) {
           setCity("Online");
           setSelectedCityDeskSlug("online");
           setScope("ALL");
-          setAttendanceMode("ONLINE");
-          setGpsStatus("Outside 150km hub — showing Online");
+          setGpsStatus("Outside 150km hub radius — showing All/Online");
           return;
         }
 
         setCity(result.desk.city);
         setSelectedCityDeskSlug(result.desk.slug);
         setScope("PAKISTAN");
-        setAttendanceMode("ALL");
         setGpsStatus(
           `Near ${result.desk.city} (~${Math.round(result.distanceKm)}km)`
         );
+        const el = document.getElementById("radar-index");
+        el?.scrollIntoView({ behavior: "smooth" });
       },
       (err) => {
         console.error("GPS error:", err);
@@ -244,15 +236,27 @@ export default function Feed({ events }: { events: EventCard[] }) {
   }
 
   const cities = useMemo(() => {
+    if (scope === "GLOBAL") {
+      return ["All", "Online"];
+    }
     const pkCities = Array.from(
       new Set(
         feedEvents
-          .filter((e) => !isOnlineOrVirtualEvent(e))
+          .filter(
+            (e) =>
+              e.scope !== "global" &&
+              !e.city.toLowerCase().includes("global") &&
+              !e.city.toLowerCase().includes("virtual") &&
+              !e.city.toLowerCase().includes("online")
+          )
           .map((e) => e.city)
       )
     ).sort();
-    return ["All", ...pkCities, "Online"];
-  }, [feedEvents]);
+    if (scope === "PAKISTAN") {
+      return ["All", ...pkCities];
+    }
+    return ["All", "Online", ...pkCities];
+  }, [feedEvents, scope]);
 
   const types = [
     "All",
@@ -290,35 +294,52 @@ export default function Feed({ events }: { events: EventCard[] }) {
     [feedEvents]
   );
 
-  const physicalEventsCount = useMemo(
-    () => feedEvents.filter((e) => !isOnlineOrVirtualEvent(e)).length,
+  const pakistanEventsCount = useMemo(
+    () =>
+      feedEvents.filter(
+        (e) =>
+          e.scope !== "global" &&
+          !e.city.toLowerCase().includes("global") &&
+          !e.city.toLowerCase().includes("virtual") &&
+          !e.city.toLowerCase().includes("online")
+      ).length,
     [feedEvents]
   );
 
-  const onlineEventsCount = useMemo(
-    () => feedEvents.filter((e) => isOnlineOrVirtualEvent(e)).length,
+  const globalEventsCount = useMemo(
+    () =>
+      feedEvents.filter(
+        (e) =>
+          e.scope === "global" ||
+          e.city.toLowerCase().includes("global") ||
+          e.city.toLowerCase().includes("virtual") ||
+          e.city.toLowerCase().includes("online")
+      ).length,
     [feedEvents]
   );
 
   const shown = useMemo(() => {
     const filtered = feedEvents.filter((e) => {
-      const isOnline = isOnlineOrVirtualEvent(e);
+      const isGlobal =
+        e.scope === "global" ||
+        e.city.toLowerCase().includes("global") ||
+        e.city.toLowerCase().includes("virtual") ||
+        e.city.toLowerCase().includes("online");
 
-      if (scope === "PAKISTAN" && isOnline) return false;
-      if (scope === "GLOBAL" && !isOnline) return false;
-
+      const isOnline = isOnlineEvent(e);
+      if (scope === "PAKISTAN" && isGlobal) return false;
+      if (scope === "GLOBAL" && !isGlobal) return false;
       if (attendanceMode === "PHYSICAL" && isOnline) return false;
       if (attendanceMode === "ONLINE" && !isOnline) return false;
-
       if (openOnly && isRegistrationClosed(e)) return false;
 
       let matchesCity = city === "All";
       if (!matchesCity) {
         if (city.toLowerCase() === "online") {
-          matchesCity = isOnline;
+          matchesCity = isGlobal;
         } else {
           matchesCity =
-            !isOnline && e.city.toLowerCase() === city.toLowerCase();
+            !isGlobal && e.city.toLowerCase() === city.toLowerCase();
         }
       }
       if (!matchesCity) return false;
@@ -349,17 +370,12 @@ export default function Feed({ events }: { events: EventCard[] }) {
     });
 
     return sortEventsDeadlineFirst(filtered);
-  }, [
-    feedEvents,
-    scope,
-    attendanceMode,
-    openOnly,
-    city,
-    type,
-    q,
-    showSavedOnly,
-    bookmarks,
-  ]);
+  }, [feedEvents, scope, attendanceMode, openOnly, city, type, q, showSavedOnly, bookmarks]);
+
+  const activeDesk =
+    CITY_DESK_MAP[selectedCityDeskSlug] || CITY_DESK_MAP["karachi"];
+  const activeCityOpenCount = openCityDeskCounts[activeDesk.slug] ?? 0;
+  const activeCityTotalCount = totalCityDeskCounts[activeDesk.slug] ?? 0;
 
   const hasActiveFilters =
     scope !== "ALL" ||
@@ -370,314 +386,711 @@ export default function Feed({ events }: { events: EventCard[] }) {
     Boolean(q.trim()) ||
     showSavedOnly;
 
-  const activeDesk =
-    CITY_DESK_MAP[selectedCityDeskSlug] || CITY_DESK_MAP["karachi"];
-  const activeCityOpenCount = openCityDeskCounts[activeDesk.slug] ?? 0;
-  const activeCityTotalCount = totalCityDeskCounts[activeDesk.slug] ?? 0;
-
   return (
     <div className="editorial-shell flex min-h-dvh flex-col bg-background text-foreground transition-colors duration-200">
-      {/* 1. Compact Header Bar — Zero Scroll Bloat */}
-      <section className="border-b-2 border-foreground bg-card/40 pt-[4.5rem]">
-        <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 lg:px-10">
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-            <div>
-              <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
-                <span className="size-2 rounded-full bg-primary animate-pulse" />
-                <span>Pakistan Tech Event Radar</span>
-                <span className="text-muted-foreground">&bull;</span>
-                <span className="text-foreground">
-                  <strong>{openEventsCount}</strong> Open &bull;{" "}
-                  {archivedEventsCount} Archived
+      {/* Sticky Quick-Jump & 1-Tap Filter Bar */}
+      <div className="sticky top-[4.5rem] z-40 border-b-2 border-foreground bg-background/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-2 px-4 py-2.5 sm:px-6 lg:px-10">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-primary mr-1">
+              Quick Filter &amp; Jump:
+            </span>
+            <button
+              type="button"
+              onClick={detectLocation}
+              className="h-8 px-3 border border-foreground bg-primary font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-white shadow-[1px_1px_0px_0px_currentColor] hover:bg-blue-600 transition-all cursor-pointer"
+            >
+              {gpsStatus || "📍 Near Me"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setScope("PAKISTAN");
+                setCity("All");
+                setAttendanceMode("ALL");
+                scrollToRadar();
+              }}
+              className={`h-8 px-2.5 border font-mono text-[11px] uppercase tracking-[0.08em] transition-all cursor-pointer ${
+                scope === "PAKISTAN" && city === "All" && attendanceMode === "ALL"
+                  ? "border-foreground bg-foreground text-background font-bold"
+                  : "border-foreground/30 bg-card text-foreground hover:border-primary"
+              }`}
+            >
+              🇵🇰 All Pakistan ({pakistanEventsCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                handleModeChange("PHYSICAL");
+                scrollToRadar();
+              }}
+              className={`h-8 px-2.5 border font-mono text-[11px] uppercase tracking-[0.08em] transition-all cursor-pointer ${
+                attendanceMode === "PHYSICAL"
+                  ? "border-primary bg-primary text-white font-bold"
+                  : "border-foreground/30 bg-card text-foreground hover:border-primary"
+              }`}
+            >
+              🏢 Physical
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                handleModeChange("ONLINE");
+                scrollToRadar();
+              }}
+              className={`h-8 px-2.5 border font-mono text-[11px] uppercase tracking-[0.08em] transition-all cursor-pointer ${
+                attendanceMode === "ONLINE"
+                  ? "border-primary bg-primary text-white font-bold"
+                  : "border-foreground/30 bg-card text-foreground hover:border-primary"
+              }`}
+            >
+              💻 Online ({globalEventsCount})
+            </button>
+            {(["Karachi", "Lahore", "Islamabad"] as const).map((quickCity) => (
+              <button
+                key={quickCity}
+                type="button"
+                onClick={() => {
+                  setCity(quickCity);
+                  setScope("PAKISTAN");
+                  if (attendanceMode === "ONLINE") setAttendanceMode("ALL");
+                  setSelectedCityDeskSlug(quickCity.toLowerCase());
+                  scrollToRadar();
+                }}
+                className={`hidden md:inline-flex items-center h-8 px-2.5 border font-mono text-[11px] uppercase tracking-[0.08em] transition-all cursor-pointer ${
+                  city.toLowerCase() === quickCity.toLowerCase()
+                    ? "border-primary bg-primary text-white font-bold"
+                    : "border-foreground/30 bg-card text-foreground hover:border-primary"
+                }`}
+              >
+                {quickCity}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em]">
+            <a
+              href="#radar-index"
+              className="border border-foreground/40 bg-card px-2.5 py-1.5 font-bold text-foreground hover:border-primary hover:text-primary transition-colors"
+            >
+              ⚡ Events ({shown.length}) &darr;
+            </a>
+            <a
+              href="#city-dispatches"
+              className="hidden sm:inline-block border border-foreground/20 px-2.5 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Cities
+            </a>
+            <a
+              href="#format-arena"
+              className="hidden sm:inline-block border border-foreground/20 px-2.5 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Formats
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* 1. Hero Split Desk */}
+      <section className="relative border-b-2 border-foreground">
+        <div className="mx-auto grid max-w-[1500px] lg:grid-cols-[minmax(0,1.5fr)_minmax(19rem,.5fr)]">
+          {/* Main Editorial Desk */}
+          <div className="relative overflow-hidden px-4 py-12 sm:px-6 sm:py-16 lg:border-r lg:border-foreground/30 lg:px-10 lg:py-20">
+            <div className="relative">
+              {/* Wire Ribbon */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-y border-foreground/30 py-2 font-mono text-[10px] font-medium uppercase tracking-[0.16em]">
+                <span className="flex items-center gap-2 text-primary font-bold">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="1em"
+                    height="1em"
+                    fill="currentColor"
+                    viewBox="0 0 256 256"
+                    className="size-3.5 animate-pulse"
+                  >
+                    <path d="M216,64H86.51L194.3,31.67a8,8,0,0,0-4.6-15.33l-160,48h0A8,8,0,0,0,24,72V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V80A16,16,0,0,0,216,64ZM104,176H64a8,8,0,0,1,0-16h40a8,8,0,0,1,0,16Zm0-32H64a8,8,0,0,1,0-16h40a8,8,0,0,1,0,16Zm0-32H64a8,8,0,0,1,0-16h40a8,8,0,0,1,0,16Zm64,56a32,32,0,1,1,32-32A32,32,0,0,1,168,168Z" />
+                  </svg>
+                  Live Pakistan event radar
+                </span>
+                <span className="font-mono text-muted-foreground">
+                  <strong className="text-primary font-bold">
+                    {openEventsCount}
+                  </strong>{" "}
+                  open registrations &bull; {archivedEventsCount} archived &bull;
+                  Nationwide circuit
                 </span>
               </div>
-              <h1 className="mt-1 font-heading text-3xl sm:text-5xl font-bold tracking-tight text-foreground">
-                Har event,{" "}
-                <span className="italic text-primary">har shehar.</span>
-              </h1>
-              <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-                Find hackathons, conferences, workshops, and meetups near you,
-                in your city, across Pakistan, or online.
-              </p>
+
+              {/* Editorial Title */}
+              <div className="grid gap-8 py-10 md:grid-cols-[minmax(0,1fr)_12rem] md:items-end">
+                <h1 className="max-w-[12ch] font-heading text-[clamp(4rem,10vw,9rem)] font-medium leading-[0.78] tracking-[-0.065em] text-foreground">
+                  Har event,
+                  <span className="block italic text-primary">har shehar.</span>
+                </h1>
+                <p className="max-w-[24ch] border-l-4 border-primary pl-4 text-sm font-medium leading-relaxed text-foreground/80 md:mb-2">
+                  Pakistan&apos;s deadline-first field guide to hackathons,
+                  conferences, campus competitions and developer meetups.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-3 border-t border-foreground/30 pt-5 sm:flex-row">
+                <a
+                  href="#radar-index"
+                  className="inline-flex items-center justify-center gap-2 h-12 rounded-none border border-foreground bg-primary px-6 text-xs font-semibold uppercase tracking-[0.12em] text-white hover:bg-blue-600 transition-all shadow-[2px_2px_0px_0px_currentColor]"
+                >
+                  <span>Open the live index</span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="1em"
+                    height="1em"
+                    fill="currentColor"
+                    viewBox="0 0 256 256"
+                    className="size-4"
+                  >
+                    <path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z" />
+                  </svg>
+                </a>
+                <Link
+                  href="/organizer/new"
+                  className="inline-flex items-center justify-center h-12 rounded-none border border-foreground bg-transparent px-6 text-xs font-semibold uppercase tracking-[0.12em] text-foreground hover:bg-foreground hover:text-background transition-colors shadow-[2px_2px_0px_0px_currentColor]"
+                >
+                  Submit a campus event
+                </Link>
+              </div>
+
+              {/* Hero Instant Event Finder — Jump directly to filtered events */}
+              <div className="mt-6 border-2 border-foreground/40 bg-card p-4 shadow-[2px_2px_0px_0px_currentColor]">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-foreground/20">
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
+                    ⚡ Instant Event Finder — Pick &amp; Jump Straight to Results
+                  </span>
+                  <span className="font-mono text-[10px] text-muted-foreground">
+                    1-tap filter &amp; auto-scroll
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={detectLocation}
+                    className="h-9 px-3 border border-foreground bg-primary font-mono text-xs font-bold uppercase tracking-[0.08em] text-white shadow-[1px_1px_0px_0px_currentColor] hover:bg-blue-600 cursor-pointer"
+                  >
+                    {gpsStatus || "📍 Events Near Me"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScope("PAKISTAN");
+                      setCity("All");
+                      setAttendanceMode("ALL");
+                      scrollToRadar();
+                    }}
+                    className="h-9 px-3 border border-foreground/40 bg-background font-mono text-xs uppercase tracking-[0.08em] text-foreground hover:bg-foreground hover:text-background cursor-pointer"
+                  >
+                    🇵🇰 All Pakistan ({pakistanEventsCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleModeChange("PHYSICAL");
+                      scrollToRadar();
+                    }}
+                    className="h-9 px-3 border border-foreground/40 bg-background font-mono text-xs uppercase tracking-[0.08em] text-foreground hover:bg-foreground hover:text-background cursor-pointer"
+                  >
+                    🏢 Physical / In-Person
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleModeChange("ONLINE");
+                      scrollToRadar();
+                    }}
+                    className="h-9 px-3 border border-foreground/40 bg-background font-mono text-xs uppercase tracking-[0.08em] text-foreground hover:bg-foreground hover:text-background cursor-pointer"
+                  >
+                    💻 Online / Virtual ({globalEventsCount})
+                  </button>
+                  {(["Karachi", "Lahore", "Islamabad", "Peshawar", "Faisalabad"] as const).map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => {
+                        setCity(c);
+                        setScope("PAKISTAN");
+                        if (attendanceMode === "ONLINE") setAttendanceMode("ALL");
+                        setSelectedCityDeskSlug(c.toLowerCase());
+                        scrollToRadar();
+                      }}
+                      className="h-9 px-3 border border-foreground/30 bg-background font-mono text-xs uppercase tracking-[0.08em] text-foreground hover:border-primary hover:text-primary cursor-pointer"
+                    >
+                      {c} &rarr;
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Rail: Source Ledger */}
+          <aside className="bg-foreground text-background dark:bg-card dark:text-foreground dark:border-l dark:border-foreground/30 px-5 py-8 sm:px-8 lg:py-12 border-t lg:border-t-0 border-foreground/30">
+            <div className="flex items-end justify-between border-b border-background/20 dark:border-foreground/20 pb-4">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-background/60 dark:text-muted-foreground">
+                  Incoming signal
+                </p>
+                <p className="mt-1 font-heading text-3xl italic text-background dark:text-foreground">
+                  Source ledger
+                </p>
+              </div>
+              <span className="font-mono text-[10px] uppercase px-2 py-0.5 border border-primary bg-primary/20 text-primary font-bold">
+                LIVE
+              </span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2.5">
-              <button
-                type="button"
-                onClick={detectLocation}
-                title="Detect your nearest Pakistan city via GPS"
-                className="inline-flex h-10 items-center gap-2 border-2 border-foreground bg-primary px-4 font-mono text-xs font-bold uppercase tracking-[0.1em] text-white shadow-[2px_2px_0px_0px_currentColor] hover:bg-blue-600 transition-all cursor-pointer"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="1em"
-                  height="1em"
-                  fill="currentColor"
-                  viewBox="0 0 256 256"
-                  className="size-4"
-                >
-                  <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm0-128a40,40,0,1,0,40,40A40,40,0,0,0,128,88Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,152Z" />
-                </svg>
-                <span>{gpsStatus || "📍 Events Near Me"}</span>
-              </button>
+            <div className="divide-y divide-background/15 dark:divide-foreground/15">
+              <div className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 py-5">
+                <span className="font-mono text-[10px] text-background/50 dark:text-muted-foreground">
+                  01
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-background dark:text-foreground">
+                    Devpost Hackathons
+                  </p>
+                  <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-background/60 dark:text-muted-foreground">
+                    Global virtual
+                  </p>
+                </div>
+                <span className="font-heading text-4xl text-primary font-bold">
+                  {sourceCounts.devpost}
+                </span>
+              </div>
 
-              <Link
-                href="/organizer/new"
-                className="inline-flex h-10 items-center justify-center border border-foreground bg-background px-4 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-foreground hover:bg-foreground hover:text-background transition-colors shadow-[2px_2px_0px_0px_currentColor]"
-              >
-                + Submit Event
-              </Link>
+              <div className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 py-5">
+                <span className="font-mono text-[10px] text-background/50 dark:text-muted-foreground">
+                  02
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-background dark:text-foreground">
+                    Luma PK Circles
+                  </p>
+                  <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-background/60 dark:text-muted-foreground">
+                    Live community
+                  </p>
+                </div>
+                <span className="font-heading text-4xl text-background dark:text-foreground font-bold">
+                  {sourceCounts.luma}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 py-5">
+                <span className="font-mono text-[10px] text-background/50 dark:text-muted-foreground">
+                  03
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-background dark:text-foreground">
+                    GDG Chapters
+                  </p>
+                  <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-background/60 dark:text-muted-foreground">
+                    Pakistan official
+                  </p>
+                </div>
+                <span className="font-heading text-4xl text-background dark:text-foreground font-bold">
+                  {sourceCounts.gdg}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 py-5">
+                <span className="font-mono text-[10px] text-background/50 dark:text-muted-foreground">
+                  04
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-background dark:text-foreground">
+                    Campus Desks
+                  </p>
+                  <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-background/60 dark:text-muted-foreground">
+                    Collegiate + Community
+                  </p>
+                </div>
+                <span className="font-heading text-4xl text-primary font-bold">
+                  {sourceCounts.campus + sourceCounts.manual}
+                </span>
+              </div>
+            </div>
+
+            <p className="mt-8 border-t border-background/20 dark:border-foreground/20 pt-4 font-mono text-[9px] uppercase leading-relaxed tracking-[0.12em] text-background/60 dark:text-muted-foreground">
+              Automated collection with human verification for campus and
+              community listings across Pakistan.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      {/* 2. The Missed-Signal Problem Section */}
+      <section className="border-b-2 border-foreground/40 bg-card text-foreground">
+        <div className="mx-auto grid max-w-[1500px] lg:grid-cols-[.78fr_1.22fr]">
+          <div className="border-foreground/20 px-4 py-14 sm:px-6 lg:border-r lg:px-10 lg:py-20">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+              The missed-signal problem
+            </p>
+            <h2 className="mt-4 max-w-[9ch] font-heading text-5xl font-medium leading-[0.9] tracking-[-0.05em] sm:text-7xl">
+              Great events hide in plain sight.
+            </h2>
+          </div>
+
+          <div className="grid sm:grid-cols-2">
+            <article className="border-b border-foreground/20 p-6 sm:border-r sm:p-10">
+              <span className="font-heading text-6xl italic text-primary font-bold">
+                01
+              </span>
+              <h3 className="mt-10 font-heading text-2xl font-semibold">
+                The announcement is scattered.
+              </h3>
+              <p className="mt-3 max-w-[38ch] text-sm leading-relaxed text-muted-foreground">
+                One event lives on LinkedIn, another in a society WhatsApp
+                group, and the next on a platform you do not check.
+              </p>
+            </article>
+
+            <article className="border-b border-foreground/20 p-6 sm:p-10">
+              <span className="font-heading text-6xl italic text-primary font-bold">
+                02
+              </span>
+              <h3 className="mt-10 font-heading text-2xl font-semibold">
+                The deadline arrives first.
+              </h3>
+              <p className="mt-3 max-w-[38ch] text-sm leading-relaxed text-muted-foreground">
+                By the time the right post reaches your feed, team formation,
+                early bird, or registration may already be closed.
+              </p>
+            </article>
+
+            <div className="p-6 sm:col-span-2 sm:p-10">
+              <p className="max-w-[52ch] font-heading text-3xl leading-tight tracking-[-0.02em] sm:text-4xl text-foreground">
+                Eventr turns those scattered posts into one city-by-city,
+                deadline-first index.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 2. Immediate Filter Bar & Event Cards Grid (Above the Fold) */}
-      <section
-        id="radar-index"
-        className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6 lg:px-10 flex-1"
-      >
-        <div className="border-2 border-foreground/40 bg-card p-4 sm:p-5 space-y-4 shadow-[2px_2px_0px_0px_currentColor]">
-          {/* Row 1: Where (Scope) + Mode (Physical vs Online) + Open Toggle */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-foreground/20 pb-3.5">
-            {/* Where / Location Scope */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">
-                Where:
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setScope("PAKISTAN");
-                  setCity("All");
-                  if (attendanceMode === "ONLINE") setAttendanceMode("ALL");
-                }}
-                className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.08em] transition-all cursor-pointer ${
-                  scope === "PAKISTAN" && city === "All"
-                    ? "border-primary bg-primary text-white font-bold shadow-[1px_1px_0px_0px_currentColor]"
-                    : "border-foreground/30 bg-background text-foreground hover:border-primary"
-                }`}
-              >
-                🇵🇰 All Pakistan ({physicalEventsCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  handleScopeChange("ALL");
-                  setCity("All");
-                  setAttendanceMode("ALL");
-                }}
-                className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.08em] transition-all cursor-pointer ${
-                  scope === "ALL" &&
-                  city === "All" &&
-                  attendanceMode === "ALL"
-                    ? "border-primary bg-primary text-white font-bold shadow-[1px_1px_0px_0px_currentColor]"
-                    : "border-foreground/30 bg-background text-foreground hover:border-primary"
-                }`}
-              >
-                🌍 All + Global ({feedEvents.length})
-              </button>
+      {/* 3. Interactive City Dispatches & Dossier Section */}
+      <section id="city-dispatches" className="border-b-2 border-foreground/40 bg-background">
+        <div className="mx-auto max-w-[1500px]">
+          <div className="grid lg:grid-cols-[1.08fr_.92fr]">
+            {/* City Selector Grid */}
+            <div className="px-4 py-14 sm:px-6 lg:border-r lg:border-foreground/30 lg:px-10 lg:py-20">
+              <div className="flex items-end justify-between gap-5 border-b-2 border-foreground/30 pb-5">
+                <div>
+                  <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+                    Regional wire / Pakistan
+                  </p>
+                  <h2 className="mt-2 font-heading text-5xl font-medium tracking-[-0.05em] sm:text-7xl text-foreground">
+                    City dispatches
+                  </h2>
+                </div>
+                <p className="hidden max-w-[24ch] text-right text-xs leading-relaxed text-muted-foreground sm:block">
+                  Select a desk for its open registrations and trending formats.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 mt-6">
+                {FEATURED_CITY_SLUGS.map((slug, i) => {
+                  const desk = CITY_DESK_MAP[slug];
+                  if (!desk) return null;
+                  const isSelected = selectedCityDeskSlug === slug;
+                  const openCount = openCityDeskCounts[slug] ?? 0;
+
+                  return (
+                    <button
+                      key={slug}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCityDeskSlug(slug);
+                        if (desk.isVirtual) {
+                          setScope("GLOBAL");
+                          setCity("Online");
+                        } else {
+                          setScope("PAKISTAN");
+                          setCity(desk.city);
+                        }
+                      }}
+                      className={`group grid min-h-20 grid-cols-[2rem_1fr_auto] items-center gap-2 border px-4 py-3 text-left outline-none transition-all shadow-[2px_2px_0px_0px_currentColor] cursor-pointer ${
+                        isSelected
+                          ? "bg-foreground text-background border-foreground font-bold"
+                          : "border-foreground/30 bg-card hover:border-primary text-foreground"
+                      }`}
+                    >
+                      <span
+                        className={`font-mono text-[10px] ${
+                          isSelected
+                            ? "text-background/70"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span>
+                        <span className="block font-heading text-xl font-semibold leading-none">
+                          {desk.isVirtual ? "Online" : desk.city}
+                        </span>
+                        <span
+                          className={`mt-1 block font-mono text-[9px] uppercase tracking-[0.12em] ${
+                            isSelected
+                              ? "text-background/70"
+                              : "text-muted-foreground"
+                          }`}
+                        >
+                          {desk.subtitle}
+                        </span>
+                      </span>
+                      <span
+                        className={`grid size-8 place-items-center border font-mono text-xs font-semibold ${
+                          isSelected
+                            ? "border-primary bg-primary text-white"
+                            : "border-foreground/30 text-foreground"
+                        }`}
+                        title={`${openCount} open registrations`}
+                      >
+                        {openCount}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Physical vs Online Switcher */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">
-                Mode:
-              </span>
-              <button
-                type="button"
-                onClick={() => handleModeChange("ALL")}
-                className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.08em] transition-all cursor-pointer ${
-                  attendanceMode === "ALL"
-                    ? "border-foreground bg-foreground text-background font-bold"
-                    : "border-foreground/30 bg-background text-foreground hover:border-primary"
-                }`}
-              >
-                All Modes
-              </button>
-              <button
-                type="button"
-                onClick={() => handleModeChange("PHYSICAL")}
-                className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.08em] transition-all cursor-pointer ${
-                  attendanceMode === "PHYSICAL"
-                    ? "border-primary bg-primary text-white font-bold shadow-[1px_1px_0px_0px_currentColor]"
-                    : "border-foreground/30 bg-background text-foreground hover:border-primary"
-                }`}
-              >
-                🏢 Physical / In-Person ({physicalEventsCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => handleModeChange("ONLINE")}
-                className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.08em] transition-all cursor-pointer ${
-                  attendanceMode === "ONLINE"
-                    ? "border-primary bg-primary text-white font-bold shadow-[1px_1px_0px_0px_currentColor]"
-                    : "border-foreground/30 bg-background text-foreground hover:border-primary"
-                }`}
-              >
-                💻 Online / Virtual ({onlineEventsCount})
-              </button>
-            </div>
+            {/* Live City Dossier Rail */}
+            <aside className="relative flex min-h-[35rem] flex-col justify-between overflow-hidden bg-primary p-5 text-white sm:p-10 lg:p-12 shadow-[4px_4px_0px_0px_currentColor]">
+              <div className="relative flex items-start justify-between gap-4 border-b border-white/40 pb-4">
+                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em]">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="1em"
+                    height="1em"
+                    fill="currentColor"
+                    viewBox="0 0 256 256"
+                    className="size-4"
+                  >
+                    <path d="M232,116h-4.72A100.21,100.21,0,0,0,140,28.72V24a12,12,0,0,0-24,0v4.72A100.21,100.21,0,0,0,28.72,116H24a12,12,0,0,0,0,24h4.72A100.21,100.21,0,0,0,116,227.28V232a12,12,0,0,0,24,0v-4.72A100.21,100.21,0,0,0,227.28,140H232a12,12,0,0,0,0-24Zm-92,87v-3a12,12,0,0,0-24,0v3a76.15,76.15,0,0,1-63-63h3a12,12,0,0,0,0-24H53a76.15,76.15,0,0,1,63-63v3a12,12,0,0,0,24,0V53a76.15,76.15,0,0,1,63,63h-3a12,12,0,0,0,0,24h3A76.15,76.15,0,0,1,140,203ZM128,84a44,44,0,1,0,44,44A44.05,44.05,0,0,0,128,84Zm0,64a20,20,0,1,1,20-20A20,20,0,0,1,128,148Z" />
+                  </svg>
+                  Active city dossier
+                </div>
+                <span className="font-mono text-[10px] uppercase">
+                  Desk Active
+                </span>
+              </div>
 
-            {/* Open Only Toggle */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setOpenOnly(!openOnly)}
-                className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.08em] transition-all cursor-pointer ${
-                  openOnly
-                    ? "border-emerald-600 bg-emerald-600 text-white font-bold"
-                    : "border-foreground/30 bg-background text-foreground hover:border-primary"
-                }`}
-              >
-                {openOnly
-                  ? `✓ Open Only (${openEventsCount})`
-                  : `🟢 Open Only (${openEventsCount})`}
-              </button>
+              <div className="relative my-12">
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/70">
+                  {activeDesk.latLng}
+                </p>
+                <h3 className="mt-3 font-heading text-[clamp(4rem,9vw,8rem)] font-medium leading-[0.78] tracking-[-0.065em]">
+                  {activeDesk.isVirtual ? "Online" : activeDesk.city}
+                </h3>
+                <p className="mt-5 max-w-[30ch] border-l-4 border-white pl-4 text-sm font-semibold uppercase tracking-[0.06em]">
+                  {activeDesk.subtitle}
+                </p>
+                <p className="mt-3 max-w-[38ch] text-xs leading-relaxed text-white/80">
+                  {activeDesk.desc}
+                </p>
+              </div>
 
-              {hasActiveFilters && (
+              <div className="relative">
+                <div className="grid grid-cols-[auto_1fr] gap-5 border-y border-white/40 py-5">
+                  <span className="font-heading text-6xl font-semibold">
+                    {activeCityOpenCount}
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold">Open registrations</p>
+                    <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.14em] text-white/70">
+                      {activeCityTotalCount} total indexed ({activeCityTotalCount - activeCityOpenCount} archived)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-x-5 gap-y-2 py-5 font-mono text-[10px] uppercase tracking-[0.12em]">
+                  {activeDesk.tags.map((t) => (
+                    <span key={t}>{t}</span>
+                  ))}
+                </div>
+
                 <button
-                  type="button"
-                  onClick={resetAllFilters}
-                  className="h-9 px-2.5 border border-foreground/30 bg-background font-mono text-[11px] uppercase text-muted-foreground hover:text-foreground hover:border-foreground cursor-pointer"
-                >
-                  ✕ Reset
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Row 2: Pick a City */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">
-              City:
-            </span>
-            {cities.map((c) => {
-              const isCityActive =
-                city.toLowerCase() === c.toLowerCase() ||
-                (c === "Online" &&
-                  (attendanceMode === "ONLINE" ||
-                    city.toLowerCase() === "online"));
-
-              const countForCity = feedEvents.filter((e) => {
-                const isOnline = isOnlineOrVirtualEvent(e);
-                if (c === "All") return true;
-                if (c === "Online") return isOnline;
-                return !isOnline && e.city.toLowerCase() === c.toLowerCase();
-              }).length;
-
-              return (
-                <button
-                  key={c}
                   type="button"
                   onClick={() => {
-                    if (c === "Online") {
+                    if (activeDesk.isVirtual) {
+                      setScope("GLOBAL");
                       setCity("Online");
-                      setSelectedCityDeskSlug("online");
-                      setAttendanceMode("ONLINE");
-                    } else if (c === "All") {
-                      setCity("All");
-                      if (attendanceMode === "ONLINE") {
-                        setAttendanceMode("ALL");
-                      }
                     } else {
-                      setCity(c);
                       setScope("PAKISTAN");
-                      if (attendanceMode === "ONLINE") {
-                        setAttendanceMode("ALL");
-                      }
-                      const found = Object.values(CITY_DESK_MAP).find(
-                        (d) => d.city.toLowerCase() === c.toLowerCase()
-                      );
-                      if (found) setSelectedCityDeskSlug(found.slug);
+                      setCity(activeDesk.city);
                     }
+                    const el = document.getElementById("radar-index");
+                    el?.scrollIntoView({ behavior: "smooth" });
                   }}
-                  className={`h-8 px-2.5 border font-mono text-xs uppercase tracking-[0.08em] transition-colors cursor-pointer flex items-center gap-1 ${
-                    isCityActive
-                      ? "border-primary bg-primary text-white font-bold shadow-[1px_1px_0px_0px_currentColor]"
-                      : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
-                  }`}
+                  className="flex w-full min-h-12 items-center justify-between border border-foreground bg-background px-5 text-xs font-semibold uppercase tracking-[0.12em] text-foreground transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 shadow-[2px_2px_0px_0px_#000] cursor-pointer"
                 >
-                  <span>{c === "All" ? "All Cities" : c}</span>
-                  <span
-                    className={`text-[10px] ${
-                      isCityActive ? "text-white/80" : "text-muted-foreground"
-                    }`}
-                  >
-                    ({countForCity})
+                  <span>
+                    Filter {activeDesk.isVirtual ? "Online" : activeDesk.city}{" "}
+                    events
                   </span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="1em"
+                    height="1em"
+                    fill="currentColor"
+                    viewBox="0 0 256 256"
+                  >
+                    <path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z" />
+                  </svg>
                 </button>
-              );
-            })}
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. Live Tech Radar Index & Interactive Filter Bar */}
+      <section
+        id="radar-index"
+        className="mx-auto w-full max-w-[1500px] px-4 py-14 sm:px-6 lg:px-10 lg:py-20 flex-1"
+      >
+        <div className="border-b-2 border-foreground/40 pb-8 space-y-6">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+                Live Dispatches Ledger
+              </p>
+              <h2 className="mt-2 font-heading text-4xl sm:text-6xl font-bold tracking-tight text-foreground">
+                Active Tech Radar
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <p className="font-mono text-xs text-muted-foreground">
+                Showing {Math.min(visibleCount, shown.length)} of {shown.length} dispatches (
+                {openEventsCount} open &bull; {archivedEventsCount} archived)
+              </p>
+            </div>
           </div>
 
-          {/* Row 3: Search + Format + Saved + Optional Tech Stack Drawer */}
-          <div className="flex flex-col gap-3 pt-1 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-1 items-center gap-2">
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search event, university (FAST, NUST, GIKI), city, or topic…"
-                className="w-full h-10 bg-background border border-foreground/40 px-3.5 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:border-primary outline-none font-mono"
-              />
+          {/* Location Scope Switcher (All / Pakistan / Global) */}
+          <div className="flex flex-wrap items-center gap-2 border-y border-foreground/20 py-3 bg-card/50 px-3">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground mr-1 font-semibold">
+              Location Scope:
+            </span>
+            <button
+              type="button"
+              onClick={() => handleScopeChange("ALL")}
+              className={`h-9 px-3.5 border font-mono text-xs uppercase tracking-[0.1em] transition-all shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${
+                scope === "ALL"
+                  ? "border-primary bg-primary text-white font-bold"
+                  : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
+              }`}
+            >
+              All Dispatches ({feedEvents.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => handleScopeChange("PAKISTAN")}
+              className={`h-9 px-3.5 border font-mono text-xs uppercase tracking-[0.1em] transition-all shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${
+                scope === "PAKISTAN"
+                  ? "border-primary bg-primary text-white font-bold"
+                  : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
+              }`}
+            >
+              🇵🇰 Pakistan (On-Ground &amp; Local) ({pakistanEventsCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => handleScopeChange("GLOBAL")}
+              className={`h-9 px-3.5 border font-mono text-xs uppercase tracking-[0.1em] transition-all shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${
+                scope === "GLOBAL"
+                  ? "border-primary bg-primary text-white font-bold"
+                  : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
+              }`}
+            >
+              🌐 Global (Virtual Only) ({globalEventsCount})
+            </button>
+
+            <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground ml-auto mr-1 font-semibold">
+              Attendance Mode:
+            </span>
+            <button
+              type="button"
+              onClick={() => handleModeChange("ALL")}
+              className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.08em] transition-all cursor-pointer ${
+                attendanceMode === "ALL"
+                  ? "border-foreground bg-foreground text-background font-bold"
+                  : "border-foreground/30 bg-background text-foreground hover:border-primary"
+              }`}
+            >
+              All Modes
+            </button>
+            <button
+              type="button"
+              onClick={() => handleModeChange("PHYSICAL")}
+              className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.08em] transition-all cursor-pointer ${
+                attendanceMode === "PHYSICAL"
+                  ? "border-primary bg-primary text-white font-bold shadow-[1px_1px_0px_0px_currentColor]"
+                  : "border-foreground/30 bg-background text-foreground hover:border-primary"
+              }`}
+            >
+              🏢 Physical / In-Person
+            </button>
+            <button
+              type="button"
+              onClick={() => handleModeChange("ONLINE")}
+              className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.08em] transition-all cursor-pointer ${
+                attendanceMode === "ONLINE"
+                  ? "border-primary bg-primary text-white font-bold shadow-[1px_1px_0px_0px_currentColor]"
+                  : "border-foreground/30 bg-background text-foreground hover:border-primary"
+              }`}
+            >
+              💻 Online / Virtual
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpenOnly(!openOnly)}
+              className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.08em] transition-all cursor-pointer ${
+                openOnly
+                  ? "border-emerald-600 bg-emerald-600 text-white font-bold"
+                  : "border-foreground/30 bg-background text-foreground hover:border-primary"
+              }`}
+            >
+              {openOnly ? `✓ Open Only (${openEventsCount})` : `🟢 Open Only (${openEventsCount})`}
+            </button>
+            {hasActiveFilters && (
               <button
                 type="button"
-                onClick={() => setShowSavedOnly(!showSavedOnly)}
-                className={`h-10 px-3 border font-mono text-xs uppercase tracking-[0.08em] shrink-0 transition-all cursor-pointer ${
-                  showSavedOnly
-                    ? "border-primary bg-primary text-white font-bold"
-                    : "border-foreground/30 bg-background text-foreground hover:border-primary"
-                }`}
+                onClick={resetAllFilters}
+                className="h-9 px-3 border border-foreground/40 bg-background font-mono text-xs uppercase text-muted-foreground hover:text-foreground hover:border-foreground cursor-pointer"
               >
-                ★ Saved ({bookmarks.length})
+                ✕ Reset
               </button>
+            )}
+          </div>
+
+          {/* Collapsible Tech Stack Affinity Switcher */}
+          <div className="border border-foreground/30 bg-card px-4 py-3 shadow-[2px_2px_0px_0px_currentColor]">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
+                  YOUR TECH STACK ({stack.length} SELECTED):
+                </span>
+                <span className="font-mono text-xs text-primary font-bold">
+                  {stack.join(", ") || "None"}
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowStackDrawer(!showStackDrawer)}
-                className={`h-10 px-3 border font-mono text-xs uppercase tracking-[0.08em] shrink-0 transition-all cursor-pointer ${
-                  showStackDrawer
-                    ? "border-foreground bg-foreground text-background font-bold"
-                    : "border-foreground/30 bg-background text-foreground hover:border-primary"
-                }`}
+                className="border border-foreground/30 bg-background px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-foreground hover:border-primary cursor-pointer"
               >
-                ⚙ Skills ({stack.length})
+                {showStackDrawer ? "Hide Skills ▲" : "Customize Skills ▼"}
               </button>
             </div>
-
-            {/* Format Filters */}
-            <div className="flex flex-wrap gap-1 items-center">
-              <span className="font-mono text-[10px] font-bold uppercase text-muted-foreground mr-1">
-                Type:
-              </span>
-              {types.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setType(t)}
-                  className={`h-8 px-2.5 border font-mono text-[11px] uppercase tracking-[0.08em] transition-colors cursor-pointer ${
-                    type.toUpperCase() === t.toUpperCase()
-                      ? "border-foreground bg-foreground text-background font-bold"
-                      : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Collapsible Tech Stack Affinity Drawer */}
-          {showStackDrawer && (
-            <div className="border-t border-foreground/20 pt-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground font-semibold">
-                  Your Tech Stack (Personalizes Match % Badge on Each Event)
-                </span>
-                <span className="font-mono text-[10px] text-primary font-bold">
-                  {stack.length} selected
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
+            {showStackDrawer && (
+              <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t border-foreground/20">
                 {STACK_OPTIONS.map((t) => {
                   const on = stack.includes(t);
                   return (
@@ -685,9 +1098,9 @@ export default function Feed({ events }: { events: EventCard[] }) {
                       key={t}
                       type="button"
                       onClick={() => toggle(t)}
-                      className={`font-mono text-xs px-2.5 py-1 border transition-all cursor-pointer ${
+                      className={`font-mono text-xs px-3 py-1 border transition-all cursor-pointer ${
                         on
-                          ? "bg-primary text-white border-primary font-bold"
+                          ? "bg-primary text-white border-primary shadow-[2px_2px_0px_0px_currentColor] font-bold"
                           : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
                       }`}
                     >
@@ -696,82 +1109,207 @@ export default function Feed({ events }: { events: EventCard[] }) {
                   );
                 })}
               </div>
+            )}
+          </div>
+
+          {/* Search, GPS, & City Filter Bar */}
+          <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search by event title, organizer, city, or tech skill…"
+                className="w-full h-11 bg-background border border-foreground/40 px-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary outline-none font-mono"
+              />
+
+              {/* GPS Near Me Button */}
+              <button
+                type="button"
+                onClick={detectLocation}
+                title="Detect nearest tech hub via GPS (150km radius)"
+                className="h-11 px-4 border font-mono text-xs uppercase tracking-[0.1em] transition-all border-foreground/30 bg-card hover:border-primary text-foreground flex items-center justify-center gap-2 shadow-[1px_1px_0px_0px_currentColor] active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="1em"
+                  height="1em"
+                  fill="currentColor"
+                  viewBox="0 0 256 256"
+                  className="size-4 text-primary"
+                >
+                  <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm0-128a40,40,0,1,0,40,40A40,40,0,0,0,128,88Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,152Z" />
+                </svg>
+                <span>{gpsStatus || "Near Me"}</span>
+              </button>
+
+              {/* Saved Only Filter Toggle */}
+              <button
+                type="button"
+                onClick={() => setShowSavedOnly(!showSavedOnly)}
+                className={`h-11 px-4 border font-mono text-xs uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-1.5 shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${
+                  showSavedOnly
+                    ? "border-primary bg-primary text-white font-bold"
+                    : "border-foreground/30 bg-card text-foreground hover:border-primary"
+                }`}
+              >
+                <span>★ Saved</span>
+                <span className="font-bold">({bookmarks.length})</span>
+              </button>
             </div>
-          )}
+
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+              {/* City Filters */}
+              <div className="flex flex-wrap gap-1.5 items-center">
+                <span className="font-mono text-[10px] uppercase text-muted-foreground mr-1">
+                  {scope === "GLOBAL" ? "Scope:" : "City / Hub:"}
+                </span>
+                {cities.map((c) => {
+                  const isCityActive =
+                    city.toLowerCase() === c.toLowerCase() ||
+                    (c === "Online" &&
+                      (city.toLowerCase() === "online" ||
+                        city.toLowerCase().includes("virtual")));
+
+                  const countForCity = feedEvents.filter((e) => {
+                    const isGlobal =
+                      e.scope === "global" ||
+                      e.city.toLowerCase().includes("global") ||
+                      e.city.toLowerCase().includes("virtual") ||
+                      e.city.toLowerCase().includes("online");
+
+                    if (scope === "PAKISTAN" && isGlobal) return false;
+                    if (scope === "GLOBAL" && !isGlobal) return false;
+
+                    if (c === "All") return true;
+                    if (c === "Online") return isGlobal;
+                    return (
+                      !isGlobal && e.city.toLowerCase() === c.toLowerCase()
+                    );
+                  }).length;
+
+                  return (
+                    <button
+                      key={c}
+                      onClick={() => {
+                        setCity(c);
+                        if (c === "Online") {
+                          setSelectedCityDeskSlug("online");
+                        } else if (c !== "All") {
+                          const found = Object.values(CITY_DESK_MAP).find(
+                            (d) => d.city.toLowerCase() === c.toLowerCase()
+                          );
+                          if (found) setSelectedCityDeskSlug(found.slug);
+                        }
+                      }}
+                      className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.1em] transition-colors shadow-[1px_1px_0px_0px_currentColor] cursor-pointer flex items-center gap-1.5 ${
+                        isCityActive
+                          ? "border-primary bg-primary text-white font-bold"
+                          : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
+                      }`}
+                    >
+                      <span>{c}</span>
+                      <span
+                        className={`text-[10px] ${
+                          isCityActive
+                            ? "text-white/80"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        ({countForCity})
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Type Filters */}
+              <div className="flex flex-wrap gap-1.5 items-center">
+                <span className="font-mono text-[10px] uppercase text-muted-foreground mr-1">
+                  Format:
+                </span>
+                {types.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setType(t)}
+                    className={`h-9 px-3 border font-mono text-xs uppercase tracking-[0.1em] transition-colors shadow-[1px_1px_0px_0px_currentColor] cursor-pointer ${
+                      type.toUpperCase() === t.toUpperCase()
+                        ? "border-foreground bg-foreground text-background font-bold"
+                        : "border-foreground/30 bg-background text-foreground hover:bg-foreground hover:text-background"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Active Filter Summary Line */}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 px-1">
-          <p className="font-mono text-xs text-muted-foreground">
-            Showing{" "}
-            <strong className="text-foreground">
-              {Math.min(visibleCount, shown.length)}
-            </strong>{" "}
-            of <strong className="text-foreground">{shown.length}</strong>{" "}
-            matching events
-            {city !== "All" ? ` in ${city}` : ""}
-            {attendanceMode !== "ALL"
-              ? ` (${attendanceMode === "PHYSICAL" ? "Physical / In-Person" : "Online / Virtual"})`
-              : ""}
-          </p>
-        </div>
-
-        {/* Event Cards Grid */}
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 mt-4">
+        {/* Spacious, Distinct Event Cards Grid */}
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-8">
           {shown.slice(0, visibleCount).map((e, index) => {
             const padIndex = String(index + 1).padStart(2, "0");
             const isSaved = bookmarks.includes(e.id);
-            const isOnline = isOnlineOrVirtualEvent(e);
+            const isGlobalEvent =
+              e.scope === "global" ||
+              e.city.toLowerCase().includes("global") ||
+              e.city.toLowerCase().includes("virtual") ||
+              e.city.toLowerCase().includes("online");
+
             const isClosed = isRegistrationClosed(e);
 
             return (
               <article
                 key={e.id}
                 id={`event-${e.id}`}
-                className={`group min-h-[20rem] border transition-all flex flex-col justify-between p-5 sm:p-6 ${
+                className={`group min-h-[22rem] border transition-all flex flex-col justify-between p-6 sm:p-7 ${
                   isClosed
                     ? "border-zinc-800 bg-zinc-950/60 opacity-60 grayscale-[60%] hover:opacity-95 hover:grayscale-0 hover:border-zinc-700 shadow-none text-zinc-400"
                     : "border-foreground/30 bg-card hover:border-primary hover:bg-background shadow-[2px_2px_0px_0px_currentColor]"
                 }`}
               >
                 <div>
-                  {/* Top card row: Clear Physical/City vs Online Badge */}
-                  <div className="flex items-center justify-between border-b border-foreground/20 pb-3 mb-3.5 gap-2">
+                  {/* Top card row */}
+                  <div className="flex items-center justify-between border-b border-foreground/20 pb-3 mb-4">
                     <span
-                      className={`font-mono text-xs font-bold uppercase px-2.5 py-1 border ${
-                        isOnline
-                          ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-400"
-                          : "border-primary bg-primary/15 text-primary"
+                      className={`font-heading text-4xl italic transition-colors ${
+                        isClosed
+                          ? "text-zinc-600"
+                          : "text-muted-foreground group-hover:text-primary"
                       }`}
                     >
-                      {isOnline
-                        ? "💻 Online / Virtual"
-                        : `🏢 Physical • ${e.city}`}
+                      {padIndex}
                     </span>
-
                     <div className="flex items-center gap-1.5 flex-wrap justify-end">
                       {isClosed ? (
-                        <span className="font-mono text-[10px] font-bold uppercase px-2 py-0.5 border border-zinc-700 bg-zinc-800/90 text-zinc-400">
-                          Closed
+                        <span className="font-mono text-[10px] font-bold uppercase px-2 py-0.5 border border-zinc-700 bg-zinc-800/90 text-zinc-400 flex items-center gap-1">
+                          <span className="inline-block size-1.5 rounded-full bg-zinc-500" />
+                          Registration Closed
                         </span>
                       ) : (
                         <span className="font-mono text-[10px] font-bold uppercase px-2 py-0.5 border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 flex items-center gap-1">
                           <span className="inline-block size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                          Open
+                          Open RSVP
                         </span>
                       )}
                       <span className="font-mono text-[10px] font-semibold uppercase px-2 py-0.5 border border-foreground/40 bg-background text-foreground">
                         {e.type}
                       </span>
-                      <span className="font-mono text-[10px] text-muted-foreground">
-                        #{padIndex}
+                      <span
+                        className={`font-mono text-[10px] font-semibold uppercase px-2 py-0.5 border ${
+                          isGlobalEvent
+                            ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-400"
+                            : "border-primary bg-primary/10 text-primary"
+                        }`}
+                      >
+                        {isGlobalEvent || e.mode === "ONLINE" ? "💻 Online • Virtual" : `🏢 Physical • ${e.city}`}
                       </span>
                     </div>
                   </div>
 
                   {/* Title & Organization */}
                   <h3
-                    className={`font-heading text-2xl sm:text-3xl font-bold leading-tight tracking-tight transition-colors ${
+                    className={`font-heading text-3xl font-bold leading-tight tracking-tight transition-colors ${
                       isClosed
                         ? "text-zinc-400"
                         : "text-foreground group-hover:text-primary"
@@ -792,43 +1330,42 @@ export default function Feed({ events }: { events: EventCard[] }) {
                       height="1em"
                       fill="currentColor"
                       viewBox="0 0 256 256"
-                      className="size-3.5 text-primary shrink-0"
+                      className="size-3.5 text-primary"
                     >
                       <path d="M128,16a88.1,88.1,0,0,0-88,88c0,75.3,80,132.17,83.41,134.55a8,8,0,0,0,9.18,0C136,236.17,216,179.3,216,104A88.1,88.1,0,0,0,128,16Zm0,56a32,32,0,1,1-32,32A32,32,0,0,1,128,72Z" />
                     </svg>
-                    <span className="truncate">
-                      {[e.organizer, e.venue].filter(Boolean).join(" • ")}
-                    </span>
+                    {[e.organizer, e.venue].filter(Boolean).join(" • ")}
                   </p>
 
-                  <p className="mt-2.5 text-xs leading-relaxed text-muted-foreground line-clamp-2">
+                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground line-clamp-2">
                     {e.description}
                   </p>
 
                   {isClosed ? (
                     <p className="mt-3 font-mono text-[11px] text-zinc-500 flex items-center gap-1.5">
                       <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-semibold text-[9px] uppercase border border-zinc-700">
-                        Ended
+                        Deadline Passed
                       </span>
                       <span>
+                        Ended:{" "}
                         {fmtDate(e.endsAt || e.startsAt, Boolean(e.dateOnly))}
                       </span>
                     </p>
                   ) : (
                     <p className="mt-3 font-mono text-[11px] text-emerald-400/90 font-medium flex items-center gap-1.5">
                       <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-semibold text-[9px] uppercase border border-emerald-500/30">
-                        Date
+                        Open
                       </span>
                       <span>
-                        {fmtDate(e.startsAt, Boolean(e.dateOnly))}
+                        Starts: {fmtDate(e.startsAt, Boolean(e.dateOnly))}
                       </span>
                     </p>
                   )}
 
                   {/* Tags & Match Score */}
-                  <div className="mt-3.5 flex flex-wrap gap-1.5 items-center">
+                  <div className="mt-4 flex flex-wrap gap-1.5 items-center">
                     <MatchBadge stack={stack} tags={e.tags} seed={e.title} />
-                    {e.tags.slice(0, 4).map((t) => (
+                    {e.tags.map((t) => (
                       <span
                         key={t}
                         className="font-mono text-[10px] px-2 py-0.5 border border-foreground/30 bg-background text-muted-foreground"
@@ -840,7 +1377,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
                 </div>
 
                 {/* Bottom Card Footer: 1-Tap RSVP, External Host Link & Calendar Sync */}
-                <div className="mt-5 border-t border-foreground/20 pt-3.5">
+                <div className="mt-6 border-t border-foreground/20 pt-4 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     {isClosed ? (
                       <a
@@ -848,11 +1385,22 @@ export default function Feed({ events }: { events: EventCard[] }) {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 h-10 border border-zinc-700 bg-zinc-800/80 px-4 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-all cursor-pointer"
+                        title="Registration has closed for this event. View past details or host archive."
                       >
                         <span className="text-zinc-500 line-through">
                           Register
                         </span>
-                        <span>Closed</span>
+                        <span>Closed / Archive</span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="1em"
+                          height="1em"
+                          fill="currentColor"
+                          viewBox="0 0 256 256"
+                          className="size-3.5 opacity-60"
+                        >
+                          <path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z" />
+                        </svg>
                       </a>
                     ) : (
                       <div className="flex flex-wrap items-center gap-2">
@@ -861,7 +1409,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
                           href={e.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 h-10 border border-foreground/40 bg-background px-3 font-mono text-xs font-semibold uppercase tracking-[0.08em] text-foreground hover:border-primary hover:text-primary transition-all"
+                          className="inline-flex items-center gap-1.5 h-10 border border-foreground/40 bg-background px-3.5 font-mono text-xs font-semibold uppercase tracking-[0.08em] text-foreground hover:border-primary hover:text-primary transition-all"
                         >
                           <span>Host Link</span>
                           <svg
@@ -878,11 +1426,15 @@ export default function Feed({ events }: { events: EventCard[] }) {
                       </div>
                     )}
 
-                    <div className="flex items-center gap-2 ml-auto">
+                    <div className="flex items-center gap-2.5 ml-auto">
                       <a
                         href={`/api/v1/calendar/event/${encodeURIComponent(e.id)}.ics`}
                         download
-                        className="font-mono text-[10px] uppercase tracking-[0.08em] border border-foreground/30 px-2 py-1 text-foreground hover:border-primary hover:text-primary transition-colors"
+                        className={`font-mono text-[10px] uppercase tracking-[0.08em] border px-2 py-1 transition-colors ${
+                          isClosed
+                            ? "border-zinc-700 text-zinc-500 hover:text-zinc-300"
+                            : "border-foreground/30 text-foreground hover:border-primary hover:text-primary"
+                        }`}
                         title="Download .ics calendar file"
                       >
                         .ICS
@@ -891,7 +1443,11 @@ export default function Feed({ events }: { events: EventCard[] }) {
                         href={buildGoogleCalendarUrl(e)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-mono text-[11px] uppercase tracking-[0.1em] text-foreground hover:text-primary transition-colors"
+                        className={`font-mono text-[11px] uppercase tracking-[0.1em] transition-colors ${
+                          isClosed
+                            ? "text-zinc-500 hover:text-zinc-300"
+                            : "text-foreground hover:text-primary"
+                        }`}
                         title="Add to Google Calendar"
                       >
                         + GCal
@@ -905,7 +1461,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
                             ? "Saved to your bookmarks"
                             : "Save this event"
                         }
-                        className={`size-9 border flex items-center justify-center transition-all ${
+                        className={`size-9 border flex items-center justify-center transition-all shadow-[1px_1px_0px_0px_currentColor] ${
                           isSaved
                             ? "border-primary bg-primary text-white"
                             : "border-foreground/30 bg-background text-foreground hover:border-primary"
@@ -939,195 +1495,190 @@ export default function Feed({ events }: { events: EventCard[] }) {
         {shown.length > visibleCount && (
           <div className="mt-10 flex flex-col items-center justify-center gap-3 border-t border-foreground/20 pt-8">
             <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
-              Showing {Math.min(visibleCount, shown.length)} of {shown.length}{" "}
-              dispatches
+              Showing {Math.min(visibleCount, shown.length)} of {shown.length} dispatches
             </p>
             <button
               type="button"
               onClick={() => setVisibleCount((prev) => prev + 12)}
-              className="inline-flex items-center gap-2 border-2 border-foreground bg-primary px-8 py-3 font-mono text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-[2px_2px_0px_0px_currentColor] transition-transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+              className="inline-flex items-center gap-2 border-2 border-foreground bg-primary px-8 py-3 font-mono text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-[2px_2px_0px_0px_currentColor] transition-transform hover:-translate-y-0.5 active:translate-y-0"
             >
-              Load More Events ({shown.length - visibleCount} remaining)
+              Load More Dispatches ({shown.length - visibleCount} remaining)
             </button>
           </div>
         )}
 
         {shown.length === 0 && (
-          <div className="border-2 border-foreground/30 bg-card p-12 text-center mt-6 shadow-[2px_2px_0px_0px_currentColor]">
-            <p className="font-heading text-2xl text-foreground">
-              No events matched your current filters.
+          <div className="border-2 border-foreground/30 bg-card p-16 text-center mt-8 shadow-[2px_2px_0px_0px_currentColor]">
+            <p className="font-heading text-3xl text-foreground">
+              No events matched your filters.
             </p>
             <p className="font-mono text-xs text-muted-foreground mt-2">
-              Try switching Mode between Physical / Online or resetting filters.
+              Try adjusting your tech stack chips or city selection.
             </p>
-            <button
-              type="button"
-              onClick={resetAllFilters}
-              className="mt-4 inline-flex items-center border border-foreground bg-primary px-4 py-2 font-mono text-xs font-bold uppercase text-white cursor-pointer"
-            >
-              Reset All Filters
-            </button>
           </div>
         )}
       </section>
 
-      {/* 3. Below-the-Fold Compact Regional & Format Directory */}
-      <section className="border-t-2 border-foreground/40 bg-card/50 mt-10">
-        <div className="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:px-10 space-y-12">
-          {/* City Dispatches & Source Ledger Row */}
-          <div className="grid gap-8 lg:grid-cols-[1.35fr_.65fr]">
+      {/* 5. Format Arena Section */}
+      <section id="format-arena" className="border-b-2 border-foreground/40">
+        <div className="mx-auto max-w-[1500px] px-4 py-14 sm:px-6 lg:px-10 lg:py-20">
+          <div className="flex flex-col justify-between gap-5 border-b-2 border-foreground/30 pb-5 sm:flex-row sm:items-end">
             <div>
-              <div className="flex items-end justify-between border-b border-foreground/30 pb-3">
-                <div>
-                  <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
-                    Regional wire / Pakistan
-                  </p>
-                  <h2 className="mt-1 font-heading text-3xl sm:text-4xl font-medium text-foreground">
-                    City dispatches
-                  </h2>
-                </div>
-                <span className="font-mono text-xs text-muted-foreground">
-                  {activeDesk.city}: {activeCityOpenCount} open /{" "}
-                  {activeCityTotalCount} total
-                </span>
-              </div>
-
-              <div className="grid gap-2.5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 mt-4">
-                {FEATURED_CITY_SLUGS.map((slug) => {
-                  const desk = CITY_DESK_MAP[slug];
-                  if (!desk) return null;
-                  const isSelected = selectedCityDeskSlug === slug;
-                  const openCount = openCityDeskCounts[slug] ?? 0;
-
-                  return (
-                    <button
-                      key={slug}
-                      type="button"
-                      onClick={() => {
-                        setSelectedCityDeskSlug(slug);
-                        if (desk.isVirtual) {
-                          setScope("GLOBAL");
-                          setCity("Online");
-                          setAttendanceMode("ONLINE");
-                        } else {
-                          setScope("PAKISTAN");
-                          setCity(desk.city);
-                          setAttendanceMode("ALL");
-                        }
-                        const el = document.getElementById("radar-index");
-                        el?.scrollIntoView({ behavior: "smooth" });
-                      }}
-                      className={`flex items-center justify-between border px-3 py-2.5 text-left transition-all cursor-pointer ${
-                        isSelected
-                          ? "bg-foreground text-background border-foreground font-bold"
-                          : "border-foreground/30 bg-background hover:border-primary text-foreground"
-                      }`}
-                    >
-                      <span className="font-heading text-base font-semibold truncate">
-                        {desk.isVirtual ? "Online" : desk.city}
-                      </span>
-                      <span className="font-mono text-xs px-1.5 py-0.5 border border-foreground/30">
-                        {openCount}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+                Browse by format
+              </p>
+              <h2 className="mt-2 font-heading text-5xl font-medium tracking-[-0.05em] sm:text-7xl text-foreground">
+                Pick your arena.
+              </h2>
             </div>
-
-            {/* Compact Source Ledger */}
-            <aside className="border border-foreground/30 bg-background p-5">
-              <div className="flex items-center justify-between border-b border-foreground/20 pb-3">
-                <h2 className="font-heading text-2xl italic text-foreground">
-                  Source ledger
-                </h2>
-                <span className="font-mono text-[10px] uppercase px-2 py-0.5 border border-primary bg-primary/10 text-primary font-bold">
-                  LIVE
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 pt-4 font-mono text-xs">
-                <div className="border border-foreground/20 p-3">
-                  <p className="text-muted-foreground text-[10px] uppercase">
-                    Devpost
-                  </p>
-                  <p className="font-heading text-2xl font-bold text-primary mt-1">
-                    {sourceCounts.devpost}
-                  </p>
-                </div>
-                <div className="border border-foreground/20 p-3">
-                  <p className="text-muted-foreground text-[10px] uppercase">
-                    Luma PK
-                  </p>
-                  <p className="font-heading text-2xl font-bold text-foreground mt-1">
-                    {sourceCounts.luma}
-                  </p>
-                </div>
-                <div className="border border-foreground/20 p-3">
-                  <p className="text-muted-foreground text-[10px] uppercase">
-                    GDG Chapters
-                  </p>
-                  <p className="font-heading text-2xl font-bold text-foreground mt-1">
-                    {sourceCounts.gdg}
-                  </p>
-                </div>
-                <div className="border border-foreground/20 p-3">
-                  <p className="text-muted-foreground text-[10px] uppercase">
-                    Campus Desks
-                  </p>
-                  <p className="font-heading text-2xl font-bold text-primary mt-1">
-                    {sourceCounts.campus + sourceCounts.manual}
-                  </p>
-                </div>
-              </div>
-            </aside>
+            <p className="max-w-[30ch] text-sm leading-relaxed text-muted-foreground">
+              From a two-hour workshop to a national build sprint—start with
+              the room you want to enter.
+            </p>
           </div>
 
-          {/* Compact Format Arena */}
-          <div>
-            <div className="flex items-end justify-between border-b border-foreground/30 pb-3">
-              <div>
-                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
-                  Browse by format
-                </p>
-                <h2 className="mt-1 font-heading text-3xl sm:text-4xl font-medium text-foreground">
-                  Pick your arena.
-                </h2>
-              </div>
-            </div>
-
-            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mt-4">
-              {(
-                [
-                  { title: "Hackathons", category: "HACKATHON" },
-                  { title: "Conferences", category: "CONFERENCE" },
-                  { title: "Workshops", category: "WORKSHOP" },
-                  { title: "Meetups", category: "MEETUP" },
-                  { title: "Competitions", category: "COMPETITION" },
-                  { title: "Tech talks", category: "TECH_TALK" },
-                ] as const
-              ).map((f) => {
-                const openCount = openFormatCounts[f.category] ?? 0;
-                const totalCount = totalFormatCounts[f.category] ?? 0;
-                return (
-                  <button
-                    key={f.title}
-                    type="button"
-                    onClick={() => {
-                      setType(f.category);
-                      const el = document.getElementById("radar-index");
-                      el?.scrollIntoView({ behavior: "smooth" });
-                    }}
-                    className="border border-foreground/30 bg-background p-4 text-left transition-all hover:border-primary hover:bg-foreground hover:text-background cursor-pointer"
-                  >
-                    <p className="font-heading text-xl font-semibold">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 mt-8">
+            {(
+              [
+                {
+                  title: "Hackathons",
+                  desc: "Build fast. Ship something real.",
+                  category: "HACKATHON",
+                },
+                {
+                  title: "Conferences",
+                  desc: "Big rooms, new ideas, useful people.",
+                  category: "CONFERENCE",
+                },
+                {
+                  title: "Workshops",
+                  desc: "Hands-on sessions for sharper skills.",
+                  category: "WORKSHOP",
+                },
+                {
+                  title: "Meetups",
+                  desc: "Find your local developer circle.",
+                  category: "MEETUP",
+                },
+                {
+                  title: "Competitions",
+                  desc: "Code, robotics, ideas and prizes.",
+                  category: "COMPETITION",
+                },
+                {
+                  title: "Tech talks",
+                  desc: "Focused conversations with practitioners.",
+                  category: "TECH_TALK",
+                },
+              ] as const
+            ).map((f) => {
+              const openCount = openFormatCounts[f.category] ?? 0;
+              const totalCount = totalFormatCounts[f.category] ?? 0;
+              return (
+                <button
+                  key={f.title}
+                  type="button"
+                  onClick={() => {
+                    setType(f.category);
+                    const el = document.getElementById("radar-index");
+                    el?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="group relative min-h-64 border border-foreground/30 bg-card p-6 text-left transition-all hover:border-primary hover:bg-foreground hover:text-background sm:p-8 shadow-[2px_2px_0px_0px_currentColor]"
+                >
+                  <div className="flex items-start justify-between">
+                    <span className="font-mono text-[10px] font-bold text-primary group-hover:text-background uppercase tracking-widest">
+                      FORMAT
+                    </span>
+                    <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground group-hover:text-background/60">
+                      {openCount} open &bull; {totalCount} indexed
+                    </span>
+                  </div>
+                  <div className="absolute inset-x-6 bottom-6 sm:inset-x-8 sm:bottom-8">
+                    <h3 className="font-heading text-4xl font-semibold tracking-[-0.03em]">
                       {f.title}
-                    </p>
-                    <p className="mt-1 font-mono text-[10px] uppercase text-muted-foreground">
-                      {openCount} open &bull; {totalCount} total
-                    </p>
-                  </button>
-                );
-              })}
+                    </h3>
+                    <div className="mt-2 flex items-end justify-between gap-4">
+                      <p className="max-w-[28ch] text-xs leading-relaxed text-muted-foreground group-hover:text-background/70">
+                        {f.desc}
+                      </p>
+                      <span className="shrink-0 transition-transform group-hover:-translate-y-1 group-hover:translate-x-1 font-mono text-sm">
+                        &rarr;
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* 6. How The Desk Works Section */}
+      <section className="border-b-2 border-foreground/40 bg-card">
+        <div className="mx-auto max-w-[1500px] px-4 py-16 sm:px-6 lg:px-10 lg:py-24">
+          <div className="grid gap-10 lg:grid-cols-[.65fr_1.35fr]">
+            <div>
+              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+                How the desk works
+              </p>
+              <h2 className="mt-3 max-w-[8ch] font-heading text-5xl font-medium leading-[0.9] tracking-[-0.05em] sm:text-7xl text-foreground">
+                Signal over noise.
+              </h2>
+            </div>
+            <div className="border-t-2 border-foreground/30">
+              <article className="grid gap-4 border-b border-foreground/20 py-7 sm:grid-cols-[3rem_10rem_1fr] sm:items-start">
+                <span className="font-heading text-3xl italic text-primary">
+                  I
+                </span>
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground">
+                  DISCOVERY
+                </p>
+                <div>
+                  <h3 className="font-heading text-2xl font-semibold tracking-[-0.02em] text-foreground">
+                    One national signal.
+                  </h3>
+                  <p className="mt-2 max-w-[58ch] text-sm leading-relaxed text-muted-foreground">
+                    Devpost, Luma, GDG chapters, and university societies are
+                    gathered into one continuously updated dispatch.
+                  </p>
+                </div>
+              </article>
+
+              <article className="grid gap-4 border-b border-foreground/20 py-7 sm:grid-cols-[3rem_10rem_1fr] sm:items-start">
+                <span className="font-heading text-3xl italic text-primary">
+                  II
+                </span>
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground">
+                  CURATION
+                </p>
+                <div>
+                  <h3 className="font-heading text-2xl font-semibold tracking-[-0.02em] text-foreground">
+                    Zero spam, deadline-first.
+                  </h3>
+                  <p className="mt-2 max-w-[58ch] text-sm leading-relaxed text-muted-foreground">
+                    Events are filtered and ranked by upcoming deadlines so you
+                    never miss team formation or early registrations.
+                  </p>
+                </div>
+              </article>
+
+              <article className="grid gap-4 py-7 sm:grid-cols-[3rem_10rem_1fr] sm:items-start">
+                <span className="font-heading text-3xl italic text-primary">
+                  III
+                </span>
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground">
+                  ACCESS
+                </p>
+                <div>
+                  <h3 className="font-heading text-2xl font-semibold tracking-[-0.02em] text-foreground">
+                    1-Tap DevPassport &amp; QR passes.
+                  </h3>
+                  <p className="mt-2 max-w-[58ch] text-sm leading-relaxed text-muted-foreground">
+                    RSVP in one tap, save signed HS256 QR tickets, and check in
+                    at the gate in seconds.
+                  </p>
+                </div>
+              </article>
             </div>
           </div>
         </div>
