@@ -8,6 +8,9 @@ async function queryDbEventsResilient(): Promise<RawEventLike[]> {
   try {
     return await prisma.event.findMany({
       where: {
+        slug: {
+          not: null,
+        },
         status: {
           in: ["APPROVED", "ARCHIVED"],
         },
@@ -122,11 +125,12 @@ const getCachedPublicEvents = unstable_cache(
 );
 
 export async function getPublicEvents(): Promise<EventCard[]> {
+  if (process.env.NODE_ENV === "test") {
+    return fetchPublicEventsUncached();
+  }
   try {
     return await getCachedPublicEvents();
   } catch {
-    return await fetchPublicEventsUncached();
+    return fetchPublicEventsUncached();
   }
 }
-
-export { fetchPublicEventsUncached };

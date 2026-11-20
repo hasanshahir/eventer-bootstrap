@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import TurnstileWidget from "./TurnstileWidget";
 
 export default function RsvpButton({
   eventId,
-  turnstileToken,
+  turnstileToken: initialTurnstileToken,
 }: {
   eventId: string;
   isAuthenticated?: boolean;
@@ -15,6 +16,9 @@ export default function RsvpButton({
     "idle" | "loading" | "done" | "waitlisted" | "unauth" | "error"
   >("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [widgetToken, setWidgetToken] = useState<string>(
+    initialTurnstileToken || ""
+  );
 
   async function rsvp() {
     setState("loading");
@@ -23,7 +27,10 @@ export default function RsvpButton({
       const res = await fetch("/api/v1/registrations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId, turnstileToken }),
+        body: JSON.stringify({
+          eventId,
+          turnstileToken: widgetToken || initialTurnstileToken || undefined,
+        }),
       });
 
       if (res.status === 401) {
@@ -82,6 +89,7 @@ export default function RsvpButton({
 
   return (
     <div className="flex flex-col items-start gap-1">
+      <TurnstileWidget onVerify={setWidgetToken} size="compact" />
       <button
         type="button"
         onClick={rsvp}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ALL_CITY_DESKS } from "@/lib/constants/geo";
+import TurnstileWidget from "@/components/TurnstileWidget";
 
 const inp =
   "w-full bg-background border border-foreground/30 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary outline-none font-mono transition-colors";
@@ -57,7 +58,7 @@ export default function NewEventPage() {
   const [err, setErr] = useState("");
   const [submittedPending, setSubmittedPending] = useState(false);
   const [source, setSource] = useState("");
-  const [turnstileToken] = useState<string>("");
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
   const [ev, setEv] = useState<ExtractedEventForm | null>(null);
 
   useEffect(() => {
@@ -569,6 +570,8 @@ export default function NewEventPage() {
                   onChange={set("tagsStr")}
                 />
               </label>
+
+              <TurnstileWidget onVerify={setTurnstileToken} />
 
               <button
                 type="button"

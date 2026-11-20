@@ -13,6 +13,7 @@ function LoginFormContent() {
   const [email, setEmail] = useState("");
   const [csrfToken, setCsrfToken] = useState("");
   const [hasGoogleProvider, setHasGoogleProvider] = useState(false);
+  const [hasEmailProvider, setHasEmailProvider] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(verifySent);
   const [errorMsg, setErrorMsg] = useState<string | null>(
@@ -30,8 +31,9 @@ function LoginFormContent() {
     fetch("/api/auth/providers")
       .then((res) => res.json())
       .then((providers: Record<string, unknown>) => {
-        if (providers && "google" in providers) {
-          setHasGoogleProvider(true);
+        if (providers) {
+          setHasGoogleProvider("google" in providers);
+          setHasEmailProvider("resend" in providers);
         }
       })
       .catch(() => {});
@@ -167,12 +169,14 @@ function LoginFormContent() {
                   </button>
                 </form>
 
-                <div className="relative flex items-center justify-center">
+                {hasEmailProvider && (
+                  <div className="relative flex items-center justify-center">
                   <div className="w-full border-t border-foreground/20" />
                   <span className="absolute bg-card px-3 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground whitespace-nowrap">
                     OR EMAIL MAGIC LINK
                   </span>
-                </div>
+                  </div>
+                )}
               </>
             )}
 
@@ -186,6 +190,7 @@ function LoginFormContent() {
             )}
 
             {/* Magic Link Form */}
+            {hasEmailProvider ? (
             <form onSubmit={handleMagicLinkSubmit} className="space-y-4">
               <div>
                 <label
@@ -223,6 +228,11 @@ function LoginFormContent() {
                 </span>
               </button>
             </form>
+            ) : (
+              <p className="border border-foreground/20 bg-background p-3.5 font-mono text-[11px] text-muted-foreground">
+                Use <strong className="text-foreground">Continue with Google</strong> above for instant one-click developer sign-in.
+              </p>
+            )}
 
             <div className="border-t border-foreground/20 pt-4 text-center">
               <p className="font-mono text-[11px] text-muted-foreground">

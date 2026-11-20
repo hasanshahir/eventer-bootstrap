@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { IBM_Plex_Mono, IBM_Plex_Sans, Newsreader } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import { auth } from "@/lib/auth";
@@ -37,6 +38,11 @@ export const metadata: Metadata = {
   },
   description:
     "Every hackathon, developer conference, workshop, and meetup across Pakistan. Curated by city, sorted by registration deadlines.",
+  alternates: {
+    types: {
+      "application/rss+xml": "/events/feed.xml",
+    },
+  },
 };
 
 export default async function RootLayout({
@@ -53,15 +59,24 @@ export default async function RootLayout({
   } | null = null;
 
   try {
-    const session = await auth();
-    if (session?.user?.id && session.user.email) {
-      sessionUser = {
-        id: session.user.id,
-        name: session.user.name || session.user.email.split("@")[0],
-        email: session.user.email,
-        role: session.user.role || "USER",
-        city: session.user.city ?? null,
-      };
+    const cookieStore = await cookies();
+    const hasSessionCookie =
+      cookieStore.has("authjs.session-token") ||
+      cookieStore.has("__Secure-authjs.session-token") ||
+      cookieStore.has("next-auth.session-token") ||
+      cookieStore.has("__Secure-next-auth.session-token");
+
+    if (hasSessionCookie) {
+      const session = await auth();
+      if (session?.user?.id && session.user.email) {
+        sessionUser = {
+          id: session.user.id,
+          name: session.user.name || session.user.email.split("@")[0],
+          email: session.user.email,
+          role: session.user.role || "USER",
+          city: session.user.city ?? null,
+        };
+      }
     }
   } catch {
     sessionUser = null;
@@ -117,13 +132,17 @@ export default async function RootLayout({
               Eventr Pakistan &bull; National Tech Signal
             </span>
             <div className="flex items-center gap-4">
+              <Link href="/events/feed.xml" className="hover:text-primary underline-offset-4 hover:underline">
+                RSS Feed
+              </Link>
+              <span>&bull;</span>
               <Link href="/privacy" className="hover:text-primary underline-offset-4 hover:underline">
                 Privacy Policy
               </Link>
+              <span>&bull;</span>
               <Link href="/terms" className="hover:text-primary underline-offset-4 hover:underline">
-                Terms
+                Terms of Service
               </Link>
-              <span>All rights reserved &bull; 2026</span>
             </div>
           </div>
         </footer>

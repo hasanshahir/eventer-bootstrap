@@ -161,6 +161,7 @@ export async function runIngestionPipeline(options?: {
             },
           },
           update: {
+            slug: ev.slug,
             title: ev.title,
             description: ev.description,
             city: ev.city,
@@ -202,6 +203,32 @@ export async function runIngestionPipeline(options?: {
             missedRuns: 0,
             organizerId: organizer.id,
           },
+        }).catch(async () => {
+          await prisma.event.update({
+            where: { id: ev.externalId },
+            data: {
+              slug: ev.slug,
+              title: ev.title,
+              description: ev.description,
+              city: ev.city,
+              venue: ev.venue,
+              type: ev.type,
+              mode: ev.mode,
+              startTime,
+              endTime: ev.endTime,
+              registrationDeadline: ev.registrationDeadline,
+              dateOnly: ev.dateOnly,
+              registrationUrl: ev.registrationUrl,
+              sourceUrl: ev.sourceUrl,
+              source: ev.source,
+              externalId: ev.externalId,
+              tags: ev.tags,
+              status,
+              needsVerification: ev.needsVerification,
+              lastSeenAt: now,
+              missedRuns: 0,
+            },
+          });
         });
         upserted++;
       }

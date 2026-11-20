@@ -62,18 +62,26 @@ export const authConfig: NextAuthConfig = {
           }),
         ]
       : []),
-    {
-      id: "resend",
-      name: "Email Magic Link",
-      type: "email",
-      maxAge: 15 * 60, // 15 minutes
-      from: env.EMAIL_FROM,
-      async sendVerificationRequest({ identifier: email, url }) {
-        await sendTransactionalEmail({
-          to: email,
-          subject: "Sign in to Eventr — Pakistan's Tech Event Radar",
-          url,
-          html: `
+    ...(env.NODE_ENV !== "production" || Boolean(env.RESEND_API_KEY)
+      ? [
+          {
+            id: "resend",
+            name: "Email Magic Link",
+            type: "email" as const,
+            maxAge: 15 * 60, // 15 minutes
+            from: env.EMAIL_FROM,
+            async sendVerificationRequest({
+              identifier: email,
+              url,
+            }: {
+              identifier: string;
+              url: string;
+            }) {
+              await sendTransactionalEmail({
+                to: email,
+                subject: "Sign in to Eventr — Pakistan's Tech Event Radar",
+                url,
+                html: `
             <div style="font-family: monospace; max-width: 540px; margin: 0 auto; padding: 24px; border: 2px solid #160d08; background: #fbf6ee; color: #160d08;">
               <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; color: #2563eb; margin: 0 0 8px;">Eventr Dispatch • Magic Sign-In Link</p>
               <h1 style="font-family: Georgia, serif; font-size: 28px; margin: 0 0 16px;">Sign in to your developer account</h1>
@@ -84,9 +92,11 @@ export const authConfig: NextAuthConfig = {
               <p style="font-size: 11px; color: #5b4d42;">If you did not request this email, you can safely ignore it.</p>
             </div>
           `,
-        });
-      },
-    },
+              });
+            },
+          },
+        ]
+      : []),
   ],
   callbacks: {
     async session({ session, user }) {
@@ -119,4 +129,3 @@ export const authConfig: NextAuthConfig = {
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
-
