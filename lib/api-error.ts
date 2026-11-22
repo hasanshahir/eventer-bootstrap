@@ -35,6 +35,17 @@ export function apiError(
     );
   }
 
+  if (internalErr instanceof SyntaxError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Invalid JSON request body.",
+        requestId,
+      },
+      { status: 400 }
+    );
+  }
+
   if (internalErr) {
     console.error(`[API Error ${requestId}] (${status}) ${message}:`, internalErr);
   }

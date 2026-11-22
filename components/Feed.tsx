@@ -1264,7 +1264,7 @@ export default function Feed({ events }: { events: EventCard[] }) {
                 id={`event-${e.id}`}
                 className={`group min-h-[22rem] border transition-all flex flex-col justify-between p-6 sm:p-7 ${
                   isClosed
-                    ? "border-zinc-800 bg-zinc-950/60 opacity-60 grayscale-[60%] hover:opacity-95 hover:grayscale-0 hover:border-zinc-700 shadow-none text-zinc-400"
+                    ? "border-foreground/20 bg-muted/60 dark:border-zinc-800 dark:bg-zinc-950/60 opacity-70 grayscale-[50%] hover:opacity-100 hover:grayscale-0 hover:border-foreground/40 shadow-none text-muted-foreground"
                     : "border-foreground/30 bg-card hover:border-primary hover:bg-background shadow-[2px_2px_0px_0px_currentColor]"
                 }`}
               >
@@ -1282,13 +1282,13 @@ export default function Feed({ events }: { events: EventCard[] }) {
                     </span>
                     <div className="flex items-center gap-1.5 flex-wrap justify-end">
                       {isClosed ? (
-                        <span className="font-mono text-[10px] font-bold uppercase px-2 py-0.5 border border-zinc-700 bg-zinc-800/90 text-zinc-400 flex items-center gap-1">
-                          <span className="inline-block size-1.5 rounded-full bg-zinc-500" />
+                        <span className="font-mono text-[10px] font-bold uppercase px-2 py-0.5 border border-foreground/25 bg-muted text-muted-foreground dark:border-zinc-700 dark:bg-zinc-800/90 dark:text-zinc-400 flex items-center gap-1">
+                          <span className="inline-block size-1.5 rounded-full bg-muted-foreground" />
                           Registration Closed
                         </span>
                       ) : (
-                        <span className="font-mono text-[10px] font-bold uppercase px-2 py-0.5 border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 flex items-center gap-1">
-                          <span className="inline-block size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="font-mono text-[10px] font-bold uppercase px-2 py-0.5 border border-emerald-600/40 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/30 dark:text-emerald-400 flex items-center gap-1">
+                          <span className="inline-block size-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400 animate-pulse" />
                           Open RSVP
                         </span>
                       )}
@@ -1342,8 +1342,8 @@ export default function Feed({ events }: { events: EventCard[] }) {
                   </p>
 
                   {isClosed ? (
-                    <p className="mt-3 font-mono text-[11px] text-zinc-500 flex items-center gap-1.5">
-                      <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-semibold text-[9px] uppercase border border-zinc-700">
+                    <p className="mt-3 font-mono text-[11px] text-muted-foreground flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-semibold text-[9px] uppercase border border-foreground/20">
                         Deadline Passed
                       </span>
                       <span>
@@ -1352,8 +1352,8 @@ export default function Feed({ events }: { events: EventCard[] }) {
                       </span>
                     </p>
                   ) : (
-                    <p className="mt-3 font-mono text-[11px] text-emerald-400/90 font-medium flex items-center gap-1.5">
-                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-semibold text-[9px] uppercase border border-emerald-500/30">
+                    <p className="mt-3 font-mono text-[11px] text-emerald-700 dark:text-emerald-400/90 font-medium flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-semibold text-[9px] uppercase border border-emerald-600/30 dark:border-emerald-500/30">
                         Open
                       </span>
                       <span>

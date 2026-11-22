@@ -140,7 +140,7 @@ export async function POST(req: Request) {
 
     if (!model || model.includes("1.5-flash")) {
       return apiError(
-        "Configured GEMINI_MODEL is retired or invalid. Please configure a supported Flash model (e.g. gemini-3.8-flash).",
+        "Configured GEMINI_MODEL is retired or invalid. Please configure a supported Flash model (e.g. gemini-2.5-flash).",
         503
       );
     }

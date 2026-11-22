@@ -186,6 +186,10 @@ export default function NewEventPage() {
 
   async function publish() {
     if (!ev) return;
+    if (!ev.startsAt) {
+      setErr("Please enter a valid start date and time.");
+      return;
+    }
     setBusy(true);
     setErr("");
     try {
@@ -197,9 +201,7 @@ export default function NewEventPage() {
           title: ev.title,
           city: ev.city || "Karachi",
           venue: ev.venue || null,
-          startTime: ev.startsAt
-            ? new Date(ev.startsAt).toISOString()
-            : new Date(Date.now() + 7 * 86400 * 1000).toISOString(),
+          startTime: new Date(ev.startsAt).toISOString(),
           endTime: ev.endsAt ? new Date(ev.endsAt).toISOString() : null,
           registrationDeadline: ev.registrationDeadline
             ? new Date(ev.registrationDeadline).toISOString()
@@ -551,7 +553,7 @@ export default function NewEventPage() {
 
               <label className="block">
                 <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground block mb-1.5 font-semibold">
-                  Description (Minimum 20 characters) *
+                  Description (Minimum 10 characters) *
                 </span>
                 <textarea
                   className={inp + " h-24"}
@@ -606,7 +608,7 @@ export default function NewEventPage() {
 
               <p className="text-xs leading-relaxed text-muted-foreground">
                 {ev.description ||
-                  "Event summary will appear here once entered (minimum 20 characters)."}
+                  "Event summary will appear here once entered (minimum 10 characters)."}
               </p>
 
               <div className="flex flex-wrap gap-1.5 pt-2">

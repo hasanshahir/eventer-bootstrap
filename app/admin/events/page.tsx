@@ -266,7 +266,7 @@ export default function AdminEventsPage() {
                             busyId === ev.id || ev.status === "APPROVED"
                           }
                           onClick={() => handleModerate(ev.id, "APPROVED")}
-                          className="h-9 px-3.5 border border-emerald-500/60 bg-emerald-500/15 text-emerald-400 font-mono text-xs uppercase tracking-wider disabled:opacity-40 cursor-pointer"
+                          className="h-9 px-3.5 border border-emerald-600/60 bg-emerald-500/15 text-emerald-700 dark:border-emerald-500/60 dark:text-emerald-400 font-mono text-xs uppercase tracking-wider disabled:opacity-40 cursor-pointer"
                         >
                           Approve
                         </button>
@@ -276,7 +276,7 @@ export default function AdminEventsPage() {
                             busyId === ev.id || ev.status === "REJECTED"
                           }
                           onClick={() => handleModerate(ev.id, "REJECTED")}
-                          className="h-9 px-3.5 border border-red-500/60 bg-red-500/15 text-red-400 font-mono text-xs uppercase tracking-wider disabled:opacity-40 cursor-pointer"
+                          className="h-9 px-3.5 border border-red-600/60 bg-red-500/15 text-red-700 dark:border-red-500/60 dark:text-red-400 font-mono text-xs uppercase tracking-wider disabled:opacity-40 cursor-pointer"
                         >
                           Reject
                         </button>

@@ -197,7 +197,11 @@ export function isRegistrationClosed(e: {
   registrationDeadline?: string | null;
   moderationStatus?: string | null;
 }): boolean {
-  if (e.moderationStatus === "ARCHIVED" || e.moderationStatus === "REJECTED") {
+  if (
+    e.moderationStatus === "ARCHIVED" ||
+    e.moderationStatus === "REJECTED" ||
+    e.moderationStatus === "PENDING"
+  ) {
     return true;
   }
   const refIso = e.registrationDeadline || e.endsAt || e.startsAt;

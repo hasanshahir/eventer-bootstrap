@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
@@ -32,6 +32,10 @@ export default function Navbar({
   const [user, setUser] = useState<NavbarUser | null>(initialUser);
   const [signingOut, setSigningOut] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setUser(initialUser);
+  }, [initialUser]);
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -127,7 +131,7 @@ export default function Navbar({
             {(user?.role === "ORGANIZER" || user?.role === "ADMIN") && (
               <Link
                 href="/organizer/scan"
-                className={`hidden xl:flex min-h-11 items-center px-1 text-xs font-semibold uppercase tracking-[0.12em] transition-colors ${
+                className={`hidden md:flex min-h-11 items-center px-1 text-xs font-semibold uppercase tracking-[0.12em] transition-colors ${
                   isScan
                     ? "text-primary font-bold underline decoration-2 underline-offset-4"
                     : "text-foreground hover:text-primary"
@@ -239,20 +243,32 @@ export default function Navbar({
             >
               Submit Event
             </Link>
-            <Link
-              href="/organizer/scan"
-              onClick={() => setMobileMenuOpen(false)}
-              className="border border-foreground/30 bg-background px-3 py-2.5 text-foreground hover:border-primary"
-            >
-              Gate Scanner
-            </Link>
-            <Link
-              href="/account"
-              onClick={() => setMobileMenuOpen(false)}
-              className="border border-foreground/30 bg-background px-3 py-2.5 text-foreground hover:border-primary"
-            >
-              Account
-            </Link>
+            {(user?.role === "ORGANIZER" || user?.role === "ADMIN") && (
+              <Link
+                href="/organizer/scan"
+                onClick={() => setMobileMenuOpen(false)}
+                className="border border-foreground/30 bg-background px-3 py-2.5 text-foreground hover:border-primary"
+              >
+                Gate Scanner
+              </Link>
+            )}
+            {user ? (
+              <Link
+                href="/account"
+                onClick={() => setMobileMenuOpen(false)}
+                className="border border-foreground/30 bg-background px-3 py-2.5 text-foreground hover:border-primary"
+              >
+                Account
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="border border-foreground/30 bg-background px-3 py-2.5 text-foreground hover:border-primary"
+              >
+                Sign In
+              </Link>
+            )}
           </div>
           {user && (
             <button

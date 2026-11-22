@@ -291,33 +291,39 @@ describe("Phase 3 Core Product Flows", () => {
   });
 
   it("4. GET /api/v1/events & GET /api/v1/calendar/event/[id] serve filtered events and .ics download", async () => {
-    const { GET: listEvents } = await import("@/app/api/v1/events/route");
-    const res = await listEvents(
-      new Request("http://localhost:3000/api/v1/events?city=Karachi&openOnly=true")
-    );
-    expect(res.status).toBe(200);
-    const data = (await res.json()) as {
-      ok: boolean;
-      count: number;
-      events: Array<{ id: string; city: string }>;
-    };
-    expect(data.ok).toBe(true);
-    expect(data.count).toBeGreaterThan(0);
-    expect(
-      data.events.every((e) => e.city.toLowerCase() === "karachi")
-    ).toBe(true);
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
+    try {
+      const { GET: listEvents } = await import("@/app/api/v1/events/route");
+      const res = await listEvents(
+        new Request("http://localhost:3000/api/v1/events?city=Karachi&openOnly=true")
+      );
+      expect(res.status).toBe(200);
+      const data = (await res.json()) as {
+        ok: boolean;
+        count: number;
+        events: Array<{ id: string; city: string }>;
+      };
+      expect(data.ok).toBe(true);
+      expect(data.count).toBeGreaterThan(0);
+      expect(
+        data.events.every((e) => e.city.toLowerCase() === "karachi")
+      ).toBe(true);
 
-    const firstId = data.events[0]!.id;
-    const { GET: getCalendar } = await import(
-      "@/app/api/v1/calendar/event/[id]/route"
-    );
-    const calRes = await getCalendar(
-      new Request(`http://localhost:3000/api/v1/calendar/event/${firstId}.ics`),
-      { params: Promise.resolve({ id: `${firstId}.ics` }) }
-    );
-    expect(calRes.status).toBe(200);
-    expect(calRes.headers.get("content-type")).toContain("text/calendar");
-    const icsText = await calRes.text();
-    expect(icsText).toContain("BEGIN:VCALENDAR");
+      const firstId = data.events[0]!.id;
+      const { GET: getCalendar } = await import(
+        "@/app/api/v1/calendar/event/[id]/route"
+      );
+      const calRes = await getCalendar(
+        new Request(`http://localhost:3000/api/v1/calendar/event/${firstId}.ics`),
+        { params: Promise.resolve({ id: `${firstId}.ics` }) }
+      );
+      expect(calRes.status).toBe(200);
+      expect(calRes.headers.get("content-type")).toContain("text/calendar");
+      const icsText = await calRes.text();
+      expect(icsText).toContain("BEGIN:VCALENDAR");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

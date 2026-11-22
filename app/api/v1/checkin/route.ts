@@ -78,7 +78,7 @@ export async function POST(req: Request) {
       return apiError("Ticket registration not found.", 404);
     }
 
-    if (reg.nonce && jwtClaims.n !== reg.nonce) {
+    if (!reg.nonce || jwtClaims.n !== reg.nonce) {
       return apiError("Ticket token signature nonce mismatch.", 401);
     }
 

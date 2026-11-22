@@ -126,8 +126,8 @@ export default async function CityDeskDetailPage({
                       <span
                         className={
                           isOpen
-                            ? "px-2 py-0.5 border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 font-bold"
-                            : "px-2 py-0.5 border border-zinc-700 bg-zinc-800 text-zinc-400"
+                            ? "px-2 py-0.5 border border-emerald-600/40 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:text-emerald-400 font-bold"
+                            : "px-2 py-0.5 border border-foreground/25 bg-muted text-muted-foreground dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400"
                         }
                       >
                         {isOpen ? "Open RSVP" : "Archived"}

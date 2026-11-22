@@ -77,7 +77,12 @@ export function generateEventIcs(
   const location = [event.venue, event.city, "Pakistan"]
     .filter(Boolean)
     .join(", ");
-  const description = `${event.description}\n\nOrganizer: ${event.organizer}\nRegistration: ${event.url}`;
+  const descriptionParts = [
+    event.description,
+    event.organizer ? `Organizer: ${event.organizer}` : null,
+    event.url ? `Registration: ${event.url}` : null,
+  ].filter(Boolean);
+  const description = descriptionParts.join("\n\n");
 
   const lines = [
     "BEGIN:VCALENDAR",
@@ -109,11 +114,15 @@ export function generateEventIcs(
 export function buildGoogleCalendarUrl(
   e: EventCard | CalendarEventInput
 ): string {
+  const detailsParts = [
+    e.description,
+    e.url ? `Official Host Registration:\n${e.url}` : null,
+  ].filter(Boolean);
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: e.title,
     location: [e.venue, e.city, "Pakistan"].filter(Boolean).join(", "),
-    details: `${e.description}\n\nOfficial Host Registration:\n${e.url}`,
+    details: detailsParts.join("\n\n"),
   });
 
   if (e.startsAt) {

@@ -7,6 +7,7 @@ import { apiError } from "@/lib/api-error";
 import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/ratelimit";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { generateTicketNonce, signTicketToken } from "@/lib/tickets";
+import { isRegistrationClosed } from "@/lib/ev";
 
 export const dynamic = "force-dynamic";
 
@@ -162,7 +163,7 @@ export async function POST(req: Request) {
       },
     });
 
-    if (existing) {
+    if (existing && existing.status !== "CANCELLED") {
       return NextResponse.json({
         ok: true,
         registration: existing,
@@ -180,13 +181,30 @@ export async function POST(req: Request) {
               id: true,
               title: true,
               capacity: true,
+              startTime: true,
               endTime: true,
+              registrationDeadline: true,
               status: true,
             },
           });
 
           if (!ev || ev.status === "REJECTED") {
             return { notFound: true as const };
+          }
+
+          const isClosed =
+            ev.status !== "APPROVED" ||
+            isRegistrationClosed({
+              startsAt: ev.startTime ? ev.startTime.toISOString() : null,
+              endsAt: ev.endTime ? ev.endTime.toISOString() : null,
+              registrationDeadline: ev.registrationDeadline
+                ? ev.registrationDeadline.toISOString()
+                : null,
+              moderationStatus: ev.status,
+            });
+
+          if (isClosed) {
+            return { notFound: false as const, closed: true as const };
           }
 
           let status: "CONFIRMED" | "WAITLISTED" = "CONFIRMED";
@@ -202,7 +220,7 @@ export async function POST(req: Request) {
             }
           }
 
-          const registrationId = randomUUID();
+          const registrationId = existing ? existing.id : randomUUID();
           const nonce = generateTicketNonce();
           const ticketToken = await signTicketToken({
             registrationId,
@@ -211,18 +229,33 @@ export async function POST(req: Request) {
             eventEndTime: ev.endTime,
           });
 
-          const registration = await tx.registration.create({
-            data: {
-              id: registrationId,
-              userId: user.id,
-              eventId: ev.id,
-              status,
-              nonce,
-              ticketToken,
-            },
-          });
+          const registration = existing
+            ? await tx.registration.update({
+                where: { id: existing.id },
+                data: {
+                  status,
+                  nonce,
+                  ticketToken,
+                  checkedInAt: null,
+                },
+              })
+            : await tx.registration.create({
+                data: {
+                  id: registrationId,
+                  userId: user.id,
+                  eventId: ev.id,
+                  status,
+                  nonce,
+                  ticketToken,
+                },
+              });
 
-          return { notFound: false as const, registration, ticketToken };
+          return {
+            notFound: false as const,
+            closed: false as const,
+            registration,
+            ticketToken,
+          };
         },
         { isolationLevel: "Serializable" }
       )
@@ -230,6 +263,10 @@ export async function POST(req: Request) {
 
     if (result.notFound) {
       return apiError("Event not found.", 404);
+    }
+
+    if (result.closed) {
+      return apiError("Registration for this event has closed.", 400);
     }
 
     return NextResponse.json(
