@@ -8,7 +8,11 @@ function LoginFormContent() {
   const searchParams = useSearchParams();
   const verifySent = searchParams.get("verify") === "1";
   const authError = searchParams.get("error");
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const rawCallback = searchParams.get("callbackUrl") || "/";
+  const callbackUrl =
+    rawCallback.startsWith("/") && !rawCallback.startsWith("//")
+      ? rawCallback
+      : "/";
 
   const [email, setEmail] = useState("");
   const [csrfToken, setCsrfToken] = useState("");
